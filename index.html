@@ -6,6 +6,7 @@
 <title>MR. SAND — ERP</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --gold:#F5A623;--gold-bright:#FFD166;
@@ -191,6 +192,16 @@ td.r{text-align:right}
 .toast.tok{border-left:3px solid var(--green);color:var(--green)}
 .toast.terr{border-left:3px solid var(--red);color:var(--red)}
 
+/* ─ IMPORT STATUS BADGES ─ */
+.bg-transit{background:rgba(52,152,219,.15);color:#3498DB;border:1px solid rgba(52,152,219,.3)}
+.bg-negoc{background:rgba(155,89,182,.15);color:#9B59B6;border:1px solid rgba(155,89,182,.3)}
+.bg-venta{background:rgba(46,204,113,.15);color:#2ECC71;border:1px solid rgba(46,204,113,.3)}
+.bg-cerrada{background:rgba(160,154,144,.12);color:var(--text3);border:1px solid var(--border)}
+
+/* ─ IO BUTTON (import/export) ─ */
+.btn-io{background:rgba(52,152,219,.1);color:var(--blue);border-color:rgba(52,152,219,.3)}
+.btn-io:hover{background:rgba(52,152,219,.22);border-color:var(--blue)}
+
 /* ─ MISC ─ */
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -355,6 +366,36 @@ select option{background:#1F1F1F;color:var(--text)}
   </div>
 </div>
 
+<!-- ══ MODAL IMPORTACIÓN ══ -->
+<div class="modal-overlay" id="modal-importacion">
+  <div class="modal">
+    <div class="modal-title" id="mimp-title">Nueva Importación</div>
+    <input type="hidden" id="mimp-id">
+    <div class="fgrid">
+      <div class="field" style="grid-column:1/-1"><label>Nombre / Descripción</label><input type="text" id="mimp-nombre" placeholder="Ej: Import 4 — Bentonita Premium 8kg"></div>
+      <div class="field"><label>Estado</label>
+        <select id="mimp-estado">
+          <option value="Negociación">Negociación</option>
+          <option value="Tránsito">Tránsito</option>
+          <option value="En Venta">En Venta</option>
+          <option value="Cerrada">Cerrada</option>
+        </select>
+      </div>
+      <div class="field"><label>Lote # (número)</label><input type="number" id="mimp-lote" min="1" placeholder="Ej: 4"></div>
+      <div class="field"><label>USD Alibaba pagado</label><input type="number" id="mimp-usd" min="0" placeholder="Ej: 15000"></div>
+      <div class="field"><label>Tipo de cambio (CLP/USD)</label><input type="number" id="mimp-tc" min="0" placeholder="Ej: 950"></div>
+      <div class="field"><label>Unidades importadas</label><input type="number" id="mimp-unidades" min="0" placeholder="Ej: 8000"></div>
+      <div class="field"><label>Fecha pedido</label><input type="date" id="mimp-fecha-pedido"></div>
+      <div class="field"><label>Fecha llegada estimada</label><input type="date" id="mimp-fecha-llegada"></div>
+      <div class="field" style="grid-column:1/-1"><label>Notas</label><textarea id="mimp-notas" rows="2" placeholder="Observaciones, proveedor, condiciones..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-importacion')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveImportacion()">Guardar importación</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ APP ══ -->
 <div class="erp" id="erp-app" style="display:none">
 
@@ -442,6 +483,8 @@ select option{background:#1F1F1F;color:var(--text)}
     </div>
     <div class="filter-row">
       <button class="btn btn-gold btn-sm" onclick="openModalProducto()">+ Nuevo producto</button>
+      <button class="btn btn-sm btn-io" onclick="exportXLSX('productos')">↓ Exportar XLSX</button>
+      <label class="btn btn-sm btn-io" style="cursor:pointer">↑ Importar XLSX<input type="file" accept=".xlsx,.csv" style="display:none" onchange="importXLSX('productos',this)"></label>
     </div>
     <div class="prod-grid" id="prod-grid"></div>
     <div class="card" style="padding:0">
@@ -454,7 +497,13 @@ select option{background:#1F1F1F;color:var(--text)}
   </div>
 
   <!-- IMPORTACIONES -->
-  <div id="importaciones" class="section"><div id="import-cards"></div></div>
+  <div id="importaciones" class="section">
+    <div class="filter-row" style="margin-bottom:14px">
+      <button class="btn btn-gold btn-sm" onclick="openModalImportacion()">+ Nueva importación</button>
+      <button class="btn btn-sm btn-io" onclick="exportXLSX('importaciones')">↓ Exportar XLSX</button>
+    </div>
+    <div id="import-cards"></div>
+  </div>
 
   <!-- INVENTARIO -->
   <div id="inventario" class="section">
@@ -484,6 +533,8 @@ select option{background:#1F1F1F;color:var(--text)}
     </div>
     <div class="filter-row">
       <button class="btn btn-gold btn-sm" onclick="openModalVenta()">+ Nueva venta</button>
+      <button class="btn btn-sm btn-io" onclick="exportXLSX('ventas')">↓ Exportar XLSX</button>
+      <label class="btn btn-sm btn-io" style="cursor:pointer">↑ Importar XLSX<input type="file" accept=".xlsx,.csv" style="display:none" onchange="importXLSX('ventas',this)"></label>
       <select class="filter-select" id="vf-imp" onchange="renderVentas()"><option value="all">Todos los lotes</option><option value="1">Import 1</option><option value="2">Import 2</option><option value="3">Import 3</option></select>
       <select class="filter-select" id="vf-vend" onchange="renderVentas()"><option value="all">Todos los vendedores</option><option value="José">José</option><option value="Javier">Javier</option><option value="Diego">Diego</option></select>
       <select class="filter-select" id="vf-est" onchange="renderVentas()"><option value="all">Todos los estados</option><option value="PAGADO">Pagado</option><option value="POR PAGAR">Por pagar</option></select>
@@ -507,6 +558,8 @@ select option{background:#1F1F1F;color:var(--text)}
     </div>
     <div class="filter-row">
       <button class="btn btn-gold btn-sm" onclick="openModalCliente()">+ Nuevo contacto</button>
+      <button class="btn btn-sm btn-io" onclick="exportXLSX('clientes')">↓ Exportar XLSX</button>
+      <label class="btn btn-sm btn-io" style="cursor:pointer">↑ Importar XLSX<input type="file" accept=".xlsx,.csv" style="display:none" onchange="importXLSX('clientes',this)"></label>
       <select class="filter-select" id="crm-seg" onchange="renderCRM()">
         <option value="all">Todos los segmentos</option>
         <option value="Prospecto">Prospectos</option>
@@ -559,6 +612,8 @@ select option{background:#1F1F1F;color:var(--text)}
     </div>
     <div class="filter-row">
       <button class="btn btn-gold btn-sm" onclick="openModalGasto()">+ Nuevo gasto</button>
+      <button class="btn btn-sm btn-io" onclick="exportXLSX('gastos')">↓ Exportar XLSX</button>
+      <label class="btn btn-sm btn-io" style="cursor:pointer">↑ Importar XLSX<input type="file" accept=".xlsx,.csv" style="display:none" onchange="importXLSX('gastos',this)"></label>
       <select class="filter-select" id="gf-imp" onchange="renderGastos()"><option value="all">Todos los lotes</option><option value="1">Import 1</option><option value="2">Import 2</option><option value="3">Import 3</option></select>
       <select class="filter-select" id="gf-cat" onchange="renderGastos()">
         <option value="all">Todas las categorías</option><option value="import">Importación</option><option value="operacion">Operación</option>
@@ -582,7 +637,7 @@ select option{background:#1F1F1F;color:var(--text)}
       <div class="metric-card"><div class="metric-label">Utilidad bruta</div><div class="metric-value c-gold" id="fin-util">—</div></div>
     </div>
     <div class="two-col">
-      <div class="card"><div class="card-header"><div class="card-title">P&amp;L — Import 2</div></div><div id="pl2"></div></div>
+      <div class="card"><div class="card-header"><div class="card-title" id="pl2-title">P&amp;L — Import activa</div></div><div id="pl2"></div></div>
       <div class="card"><div class="card-header"><div class="card-title">Gastos por categoría</div></div><div id="fin-cats" style="margin-top:4px"></div></div>
     </div>
     <div class="card"><div class="card-header"><div class="card-title">Resumen por importación</div></div>
@@ -607,8 +662,8 @@ const {createClient} = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─ ESTADO GLOBAL ─────────────────────────────────────────
-let V=[], LV=[], G=[], C=[], M=[], P=[];
-// V=ventas, LV=lineas_venta, G=gastos, C=clientes, M=mermas, P=productos
+let V=[], LV=[], G=[], C=[], M=[], P=[], I=[];
+// V=ventas, LV=lineas_venta, G=gastos, C=clientes, M=mermas, P=productos, I=importaciones
 
 const CAT_COLORS = {import:'#F5A623',operacion:'#3498DB',gastos:'#888780',marketing:'#E67E22',logistica:'#F39C12',iva:'#E74C3C',imposiciones:'#9B59B6',patrimonio:'#2ECC71'};
 const SEG_CFG = {Prospecto:{cls:'seg-prospecto',color:'#3498DB'},Cliente:{cls:'seg-cliente',color:'#2ECC71'},Partner:{cls:'seg-partner',color:'#F5A623'}};
@@ -649,15 +704,18 @@ document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key===
 async function loadAll(){
   document.getElementById('sync-status').textContent='● Sincronizando...';
   try{
-    const[rv,rlv,rg,rc,rm,rp]=await Promise.all([
+    const[rv,rlv,rg,rc,rm,rp,ri]=await Promise.all([
       sb.from('ventas').select('*').order('fecha',{ascending:false}),
       sb.from('lineas_venta').select('*'),
       sb.from('gastos').select('*').order('fecha',{ascending:false}),
       sb.from('clientes').select('*').order('nombre'),
       sb.from('mermas').select('*').order('fecha',{ascending:false}),
       sb.from('productos').select('*').order('nombre'),
+      sb.from('importaciones').select('*').order('lote',{ascending:true}),
     ]);
-    V=rv.data||[];LV=rlv.data||[];G=rg.data||[];C=rc.data||[];M=rm.data||[];P=rp.data||[];
+    V=rv.data||[];LV=rlv.data||[];G=rg.data||[];C=rc.data||[];M=rm.data||[];P=rp.data||[];I=ri.data||[];
+    // Sync selects de importación con los lotes reales
+    syncImportSelects();
     document.getElementById('sync-status').textContent='● Conectado';
     document.getElementById('last-update').textContent='Act: '+new Date().toLocaleTimeString('es-CL');
     renderAll();
@@ -727,7 +785,7 @@ function addLinea(data=null){
       <option value="">-- Producto --</option>${opts}
     </select>
     <input type="number" min="1" placeholder="Cant." value="${data?data.cantidad:1}" oninput="calcTotal()" style="text-align:center">
-    <input type="number" min="0" placeholder="Precio" value="${data?data.precio_unitario:''}" oninput="calcTotal()" style="text-align:right">
+    <input type="number" min="0" placeholder="$ Precio" value="${data?data.precio_unitario:''}" oninput="calcTotal()" style="text-align:right" title="Precio editable — modifica manualmente si es necesario">
     <button class="linea-del" onclick="this.parentElement.remove();calcTotal()" title="Quitar">✕</button>`;
   if(data&&data.producto_id){div.querySelector('select').value=data.producto_id}
   wrap.appendChild(div);
@@ -740,7 +798,9 @@ function _setLineaPrice(sel){
   const cliSel=document.getElementById('mv-cliente').selectedOptions[0];
   const isPartner=cliSel&&cliSel.dataset.seg==='Partner';
   const precio=isPartner?(parseInt(opt.dataset.pp)||parseInt(opt.dataset.precio)||0):(parseInt(opt.dataset.precio)||0);
-  sel.parentElement.querySelectorAll('input')[1].value=precio;
+  const precioInput=sel.parentElement.querySelectorAll('input')[1];
+  // Solo autocompletar si el campo está vacío (respeta precio manual ya ingresado)
+  if(!precioInput.value||precioInput.value==='0')precioInput.value=precio;
   calcTotal();
 }
 
@@ -1000,19 +1060,140 @@ function renderProductos(){
   }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Sin ventas con detalle de producto aún</td></tr>';
 }
 
+// ── Sync selects de importación en todo el ERP ──────────
+function syncImportSelects(){
+  const opts=I.length
+    ?I.map(imp=>`<option value="${imp.lote}">Import ${imp.lote}${imp.nombre?' — '+imp.nombre:''}</option>`).join('')
+    :'<option value="1">Import 1</option><option value="2">Import 2</option><option value="3">Import 3</option>';
+  ['vf-imp','gf-imp','mg-imp','mv-imp'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const cur=el.value;
+    el.innerHTML='<option value="all">Todos los lotes</option>'+opts;
+    if(id==='mg-imp'||id==='mv-imp'){el.innerHTML=opts}
+    if(cur)el.value=cur;
+  });
+}
+
+// ══ IMPORTACIONES CRUD ══════════════════════════════════
+
+function impStatusBadge(estado){
+  const m={Negociación:'bg-negoc',Tránsito:'bg-transit','En Venta':'bg-venta',Cerrada:'bg-cerrada'};
+  return`<span class="badge ${m[estado]||'bg-gray'}">${estado||'—'}</span>`;
+}
+
+function openModalImportacion(data=null){
+  openM('modal-importacion');
+  document.getElementById('mimp-title').textContent=data?'Editar Importación':'Nueva Importación';
+  document.getElementById('mimp-id').value=data?data.id:'';
+  document.getElementById('mimp-nombre').value=data?data.nombre||'':'';
+  document.getElementById('mimp-estado').value=data?data.estado||'Negociación':'Negociación';
+  document.getElementById('mimp-lote').value=data?data.lote||'':'';
+  document.getElementById('mimp-usd').value=data?data.usd_alibaba||'':'';
+  document.getElementById('mimp-tc').value=data?data.tipo_cambio||'':'';
+  document.getElementById('mimp-unidades').value=data?data.unidades||'':'';
+  document.getElementById('mimp-fecha-pedido').value=data?data.fecha_pedido||'':'';
+  document.getElementById('mimp-fecha-llegada').value=data?data.fecha_llegada||'':'';
+  document.getElementById('mimp-notas').value=data?data.notas||'':'';
+}
+async function saveImportacion(){
+  const eid=document.getElementById('mimp-id').value;
+  const d={
+    nombre:document.getElementById('mimp-nombre').value,
+    estado:document.getElementById('mimp-estado').value,
+    lote:parseInt(document.getElementById('mimp-lote').value)||null,
+    usd_alibaba:parseFloat(document.getElementById('mimp-usd').value)||null,
+    tipo_cambio:parseFloat(document.getElementById('mimp-tc').value)||null,
+    unidades:parseInt(document.getElementById('mimp-unidades').value)||null,
+    fecha_pedido:document.getElementById('mimp-fecha-pedido').value||null,
+    fecha_llegada:document.getElementById('mimp-fecha-llegada').value||null,
+    notas:document.getElementById('mimp-notas').value,
+  };
+  if(!d.nombre){toast('El nombre es obligatorio',false);return}
+  let err;
+  if(eid)({error:err}=await sb.from('importaciones').update(d).eq('id',eid));
+  else({error:err}=await sb.from('importaciones').insert(d));
+  err?toast('Error: '+err.message,false):(toast(eid?'Importación actualizada':'Importación guardada'),closeModal('modal-importacion'),loadAll());
+}
+async function deleteImportacion(id){
+  if(!confirm('¿Eliminar esta importación?'))return;
+  const{error}=await sb.from('importaciones').delete().eq('id',id);
+  error?toast('Error: '+error.message,false):(toast('Importación eliminada'),loadAll());
+}
+async function cambiarEstadoImp(id,estado){
+  const{error}=await sb.from('importaciones').update({estado}).eq('id',id);
+  error?toast('Error',false):(toast('Estado → '+estado),loadAll());
+}
+
 function renderImportaciones(){
-  const v1=V.filter(v=>v.importacion===1),v2=V.filter(v=>v.importacion===2),v3=V.filter(v=>v.importacion===3);
-  const g1=G.filter(g=>g.importacion===1),g2=G.filter(g=>g.importacion===2),g3=G.filter(g=>g.importacion===3);
-  const tv1=v1.reduce((a,b)=>a+b.total,0),tv2=v2.filter(v=>v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
-  const b1=v1.reduce((a,b)=>a+b.bolsas,0),b2=v2.reduce((a,b)=>a+b.bolsas,0);
-  const tg1=g1.reduce((a,b)=>a+b.monto,0),tg2=g2.reduce((a,b)=>a+b.monto,0),tg3=g3.reduce((a,b)=>a+b.monto,0);
-  document.getElementById('import-cards').innerHTML=`
-  <div class="import-card"><div class="import-header"><span class="import-name">Import 1 — Bentonita 8kg</span><span class="badge bg-gray">Cerrada</span></div>
-    <div class="isg"><div class="is"><div class="is-lbl">Importadas</div><div class="is-val">6.000</div></div><div class="is"><div class="is-lbl">Vendidas</div><div class="is-val">${b1.toLocaleString('es-CL')}</div></div><div class="is"><div class="is-lbl">Ventas</div><div class="is-val" style="color:var(--gold)">${fmtS(tv1)}</div></div><div class="is"><div class="is-lbl">Costos</div><div class="is-val" style="color:var(--red)">${fmtS(tg1)}</div></div><div class="is"><div class="is-lbl">USD Alibaba</div><div class="is-val">~6.321</div></div><div class="is"><div class="is-lbl">TC</div><div class="is-val">$873</div></div></div></div>
-  <div class="import-card active-import"><div class="import-header"><span class="import-name">Import 2 — Bentonita Lavanda 8kg</span><span class="badge bg-green">En venta</span></div>
-    <div class="isg"><div class="is"><div class="is-lbl">Totales</div><div class="is-val">3.309</div></div><div class="is"><div class="is-lbl">Vendidas</div><div class="is-val" style="color:var(--gold)">${b2.toLocaleString('es-CL')}</div></div><div class="is"><div class="is-lbl">Stock estimado</div><div class="is-val" style="color:var(--green)">${Math.max(0,3309-b2-M.reduce((a,b)=>a+b.cantidad,0)).toLocaleString('es-CL')}</div></div><div class="is"><div class="is-lbl">Ventas cobradas</div><div class="is-val" style="color:var(--gold)">${fmtS(tv2)}</div></div><div class="is"><div class="is-lbl">Costos</div><div class="is-val" style="color:var(--red)">${fmtS(tg2)}</div></div><div class="is"><div class="is-lbl">USD</div><div class="is-val">~12.000</div></div></div></div>
-  <div class="import-card"><div class="import-header"><span class="import-name">Import 3 — Multi-producto</span><span class="badge bg-gold">En tránsito</span></div>
-    <div class="isg"><div class="is"><div class="is-lbl">Pago 1 Alibaba</div><div class="is-val">$8.436.602</div></div><div class="is"><div class="is-lbl">Pago 2 Alibaba</div><div class="is-val">$11.015.472</div></div><div class="is"><div class="is-lbl">IVA aduana</div><div class="is-val" style="color:var(--red)">$3.605.213</div></div><div class="is"><div class="is-lbl">Agente Leo</div><div class="is-val">$2.000.000</div></div><div class="is"><div class="is-lbl">Total gastado</div><div class="is-val" style="color:var(--red)">${fmtS(tg3)}</div></div><div class="is"><div class="is-lbl">USD totales</div><div class="is-val">~20.405</div></div></div></div>`;
+  const container=document.getElementById('import-cards');
+  if(!I.length){
+    container.innerHTML=`<div style="color:var(--text3);font-size:12px;padding:32px;text-align:center;border:1px dashed var(--border);border-radius:4px">
+      No hay importaciones registradas. Crea la primera con "+ Nueva importación".
+    </div>`;
+    return;
+  }
+  container.innerHTML=I.map(imp=>{
+    const lote=imp.lote;
+    // Datos calculados desde ventas y gastos del mismo lote
+    const ventasLote=V.filter(v=>v.importacion==lote);
+    const gastosLote=G.filter(g=>g.importacion==lote);
+    const ventasCobradas=ventasLote.filter(v=>v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
+    const ventasTotales=ventasLote.reduce((a,b)=>a+b.total,0);
+    const ventasPendientes=ventasLote.filter(v=>v.estado==='POR PAGAR').reduce((a,b)=>a+b.total,0);
+    const udsVendidas=ventasLote.reduce((a,b)=>a+b.bolsas,0);
+    const mermasLote=M.reduce((a,b)=>a+b.cantidad,0); // mermas solo hay una tabla sin lote
+    const totalGastos=gastosLote.reduce((a,b)=>a+b.monto,0);
+    const gastosPorCat={};gastosLote.forEach(g=>{gastosPorCat[g.categoria]=(gastosPorCat[g.categoria]||0)+g.monto});
+    const stockEst=imp.unidades?Math.max(0,imp.unidades-udsVendidas):null;
+    const margen=ventasCobradas-totalGastos;
+    const clpAlib=imp.usd_alibaba&&imp.tipo_cambio?imp.usd_alibaba*imp.tipo_cambio:null;
+    const isActive=imp.estado==='En Venta'||imp.estado==='Tránsito';
+    const otrosEstados=['Negociación','Tránsito','En Venta','Cerrada'].filter(s=>s!==imp.estado);
+
+    const catRows=Object.entries(gastosPorCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>
+      `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border)">
+        <span style="color:${CAT_COLORS[cat]||'var(--text3)'}">● ${cat}</span>
+        <span style="color:var(--text2)">${fmtS(val)}</span>
+      </div>`).join('');
+
+    return`<div class="import-card${isActive?' active-import':''}" style="margin-bottom:14px">
+      <div class="import-header">
+        <div>
+          <span class="import-name">Import ${lote||'?'} — ${imp.nombre||'Sin nombre'}</span>
+          ${imp.fecha_pedido?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Pedido: ${fmtD(imp.fecha_pedido)}${imp.fecha_llegada?' · Llegada est.: '+fmtD(imp.fecha_llegada):''}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${impStatusBadge(imp.estado)}
+          <button class="btn btn-sm" onclick='openModalImportacion(${JSON.stringify(imp)})' style="font-size:9px;padding:2px 8px">Editar</button>
+          <button class="btn btn-sm btn-red" onclick="deleteImportacion('${imp.id}')" style="font-size:9px;padding:2px 8px">✕</button>
+        </div>
+      </div>
+
+      <div class="isg" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">
+        ${imp.unidades?`<div class="is"><div class="is-lbl">Unidades import.</div><div class="is-val">${imp.unidades.toLocaleString('es-CL')}</div></div>`:''}
+        <div class="is"><div class="is-lbl">Uds. vendidas</div><div class="is-val" style="color:var(--gold)">${udsVendidas.toLocaleString('es-CL')}</div></div>
+        ${stockEst!==null?`<div class="is"><div class="is-lbl">Stock estimado</div><div class="is-val" style="color:var(--green)">${stockEst.toLocaleString('es-CL')}</div></div>`:''}
+        <div class="is"><div class="is-lbl">Ventas cobradas</div><div class="is-val" style="color:var(--green)">${fmtS(ventasCobradas)}</div></div>
+        ${ventasPendientes>0?`<div class="is"><div class="is-lbl">Por cobrar</div><div class="is-val" style="color:var(--orange)">${fmtS(ventasPendientes)}</div></div>`:''}
+        <div class="is"><div class="is-lbl">Total gastos</div><div class="is-val" style="color:var(--red)">${fmtS(totalGastos)}</div></div>
+        ${clpAlib?`<div class="is"><div class="is-lbl">CLP Alibaba</div><div class="is-val">${fmtS(clpAlib)}</div></div>`:''}
+        ${imp.usd_alibaba?`<div class="is"><div class="is-lbl">USD</div><div class="is-val">$${imp.usd_alibaba.toLocaleString('es-CL')}</div></div>`:''}
+        ${imp.tipo_cambio?`<div class="is"><div class="is-lbl">TC</div><div class="is-val">$${imp.tipo_cambio.toLocaleString('es-CL')}</div></div>`:''}
+        <div class="is"><div class="is-lbl">Margen neto</div><div class="is-val" style="color:${margen>=0?'var(--gold)':'var(--red)'}">${fmtS(margen)}</div></div>
+      </div>
+
+      ${catRows?`<div style="background:var(--bg3);border-radius:3px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Gastos por categoría</div>
+        ${catRows}
+      </div>`:''}
+
+      ${imp.notas?`<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">${imp.notas}</div>`:''}
+
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${otrosEstados.map(s=>`<button class="btn btn-sm" onclick="cambiarEstadoImp('${imp.id}','${s}')" style="font-size:9px;padding:2px 8px">→ ${s}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderInventario(){
@@ -1146,20 +1327,160 @@ function renderGastos(){
 
 function renderFinanzas(){
   const tV=V.reduce((a,b)=>a+b.total,0),tG=G.reduce((a,b)=>a+b.monto,0);
-  const v1=V.filter(v=>v.importacion===1).reduce((a,b)=>a+b.total,0);
-  const v2=V.filter(v=>v.importacion===2&&v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
   document.getElementById('fin-ing').textContent=fmtS(tV);
   document.getElementById('fin-cos').textContent=fmtS(tG);
   document.getElementById('fin-util').textContent=fmtS(tV-tG);
   document.getElementById('fin-util').className='metric-value '+(tV-tG>=0?'c-gold':'c-dn');
-  const tg2=G.filter(g=>g.importacion===2).reduce((a,b)=>a+b.monto,0);
-  const c2=3123441+3507905,iv2=1194665,ag2=550000+790197,fl2=773500+200000;
-  const m2=v2-(c2+iv2+ag2+fl2),otr2=Math.max(0,tg2-c2-iv2-ag2-fl2);
-  document.getElementById('pl2').innerHTML=`<div class="pl-row sh"><span>Ingresos</span></div><div class="pl-row"><span>Ventas cobradas Import 2</span><span style="color:var(--green)">${fmtS(v2)}</span></div><div class="pl-row sh"><span>Costos directos</span></div><div class="pl-row"><span>Pago Alibaba</span><span style="color:var(--red)">-${fmtS(c2)}</span></div><div class="pl-row"><span>IVA Aduana</span><span style="color:var(--red)">-${fmtS(iv2)}</span></div><div class="pl-row"><span>Agente aduanero</span><span style="color:var(--red)">-${fmtS(ag2)}</span></div><div class="pl-row"><span>Flete + descarga</span><span style="color:var(--red)">-${fmtS(fl2)}</span></div><div class="pl-row total"><span>Margen bruto</span><span style="color:${m2>=0?'var(--gold)':'var(--red)'}">${fmtS(m2)}</span></div><div class="pl-row sh"><span>Otros gastos</span></div><div class="pl-row"><span>Marketing, logística, admin</span><span style="color:var(--red)">-${fmtS(otr2)}</span></div><div class="pl-row total"><span>Resultado neto</span><span style="color:${(m2-otr2)>=0?'var(--gold)':'var(--red)'}">${fmtS(m2-otr2)}</span></div>`;
+
+  // P&L dinámico para importación activa (En Venta)
+  const impActiva=I.find(i=>i.estado==='En Venta')||I[I.length-1];
+  if(impActiva){
+    const lote=impActiva.lote;
+    const vActiva=V.filter(v=>v.importacion==lote&&v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
+    const gActiva=G.filter(g=>g.importacion==lote);
+    const gCats={};gActiva.forEach(g=>{gCats[g.categoria]=(gCats[g.categoria]||0)+g.monto});
+    const tgActiva=gActiva.reduce((a,b)=>a+b.monto,0);
+    const margen=vActiva-tgActiva;
+    document.getElementById('pl2').innerHTML=
+      `<div class="pl-row sh"><span>Ingresos</span></div>`+
+      `<div class="pl-row"><span>Ventas cobradas Import ${lote}</span><span style="color:var(--green)">${fmtS(vActiva)}</span></div>`+
+      `<div class="pl-row sh"><span>Gastos por categoría</span></div>`+
+      Object.entries(gCats).map(([cat,val])=>`<div class="pl-row"><span style="color:${CAT_COLORS[cat]||'var(--text2)'}">${cat}</span><span style="color:var(--red)">-${fmtS(val)}</span></div>`).join('')+
+      `<div class="pl-row total"><span>Resultado neto</span><span style="color:${margen>=0?'var(--gold)':'var(--red)'}">${fmtS(margen)}</span></div>`;
+    const titleEl=document.getElementById('pl2-title');
+    if(titleEl)titleEl.textContent=`P&L — Import ${lote}: ${impActiva.nombre||''}`;
+  }
+
   const ct={};G.forEach(g=>{ct[g.categoria]=(ct[g.categoria]||0)+g.monto});const tGt=Object.values(ct).reduce((a,b)=>a+b,1);
   document.getElementById('fin-cats').innerHTML=Object.entries(ct).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`<div class="prow"><div class="plbl">${cat}</div><div class="pbar"><div class="pfill" style="width:${Math.round(val/tGt*100)}%;background:${CAT_COLORS[cat]||'#888'}"></div></div><div class="pval">${fmtS(val)}</div></div>`).join('');
-  document.getElementById('fin-imp-tbl').innerHTML=`<tr><td>Import 1</td><td class="r">~6.321</td><td class="r">$873</td><td class="r">$4.234.666</td><td class="r">$1.396.803</td><td class="r c-gold">${fmtS(v1)}</td><td><span class="badge bg-gray">Cerrada</span></td></tr><tr><td>Import 2</td><td class="r">~12.000</td><td class="r">$885</td><td class="r">$6.631.346</td><td class="r">$1.194.665</td><td class="r c-gold">${fmtS(v2)}</td><td><span class="badge bg-green">Activa</span></td></tr><tr><td>Import 3</td><td class="r">~20.405</td><td class="r">~$950</td><td class="r">$19.452.074</td><td class="r">$3.605.213</td><td class="r c-gold">En proceso</td><td><span class="badge bg-gold">En tránsito</span></td></tr>`;
+
+  // Resumen dinámico por importación
+  const impRows=I.length?I.map(imp=>{
+    const lote=imp.lote;
+    const vLote=V.filter(v=>v.importacion==lote&&v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
+    const gIva=G.filter(g=>g.importacion==lote&&g.categoria==='iva').reduce((a,b)=>a+b.monto,0);
+    const clpAlib=imp.usd_alibaba&&imp.tipo_cambio?(imp.usd_alibaba*imp.tipo_cambio):null;
+    return`<tr>
+      <td>Import ${lote}${imp.nombre?' — '+imp.nombre:''}</td>
+      <td class="r">${imp.usd_alibaba?imp.usd_alibaba.toLocaleString('en-US'):'—'}</td>
+      <td class="r">${imp.tipo_cambio?'$'+imp.tipo_cambio.toLocaleString('es-CL'):'—'}</td>
+      <td class="r">${clpAlib?fmtS(clpAlib):'—'}</td>
+      <td class="r" style="color:var(--red)">${gIva?fmtS(gIva):'—'}</td>
+      <td class="r c-gold">${fmtS(vLote)||'—'}</td>
+      <td>${impStatusBadge(imp.estado)}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Sin importaciones registradas</td></tr>`;
+  document.getElementById('fin-imp-tbl').innerHTML=impRows;
 }
+// ══ EXPORTAR / IMPORTAR XLSX ════════════════════════════
+
+function exportXLSX(modulo){
+  let rows=[], filename='';
+  if(modulo==='ventas'){
+    filename='MrSand_Ventas.xlsx';
+    rows=V.map(v=>{
+      const lineas=LV.filter(l=>l.venta_id===v.id).map(l=>`${l.cantidad}× ${l.producto_nombre} @${l.precio_unitario}`).join(' | ');
+      return{ID:v.id,Fecha:v.fecha,Cliente:v.cliente_nombre||'',Productos:lineas,Vendedor:v.vendedor||'',
+        Unidades:v.bolsas,Total:v.total,MedioPago:v.medio_pago||'',Estado:v.estado,Lote:v.importacion,Notas:v.notas||''};
+    });
+  } else if(modulo==='clientes'){
+    filename='MrSand_Clientes.xlsx';
+    rows=C.map(c=>({ID:c.id,Nombre:c.nombre,Segmento:c.tipo||'',Contacto:c.contacto||'',Telefono:c.telefono||'',
+      Email:c.email||'',Comuna:c.comuna||'',Region:c.region||'',Notas:c.notas||''}));
+  } else if(modulo==='productos'){
+    filename='MrSand_Productos.xlsx';
+    rows=P.map(p=>({ID:p.id,Nombre:p.nombre,SKU:p.sku||'',Formato:p.formato||'',Descripcion:p.descripcion||'',
+      PrecioUnitario:p.precio_unitario||0,PrecioPartner:p.precio_partner||'',Categoria:p.categoria||'',Activo:p.activo!==false?'Si':'No'}));
+  } else if(modulo==='gastos'){
+    filename='MrSand_Gastos.xlsx';
+    rows=G.map(g=>({ID:g.id,Fecha:g.fecha,Categoria:g.categoria,Detalle:g.detalle,Monto:g.monto,Responsable:g.responsable||'',Lote:g.importacion}));
+  } else if(modulo==='importaciones'){
+    filename='MrSand_Importaciones.xlsx';
+    rows=I.map(imp=>({ID:imp.id,Lote:imp.lote,Nombre:imp.nombre,Estado:imp.estado,
+      USD_Alibaba:imp.usd_alibaba||'',TipoCambio:imp.tipo_cambio||'',Unidades:imp.unidades||'',
+      FechaPedido:imp.fecha_pedido||'',FechaLlegada:imp.fecha_llegada||'',Notas:imp.notas||''}));
+  }
+  if(!rows.length){toast('No hay datos para exportar',false);return}
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,modulo);
+  XLSX.writeFile(wb,filename);
+  toast(`Exportado: ${filename}`);
+}
+
+async function importXLSX(modulo, input){
+  const file=input.files[0];
+  if(!file){return}
+  input.value='';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws);
+      if(!rows.length){toast('El archivo está vacío',false);return}
+
+      let records=[], tabla='', errMsg='';
+      if(modulo==='ventas'){
+        tabla='ventas';
+        records=rows.map(r=>({
+          fecha:r.Fecha||r.fecha||td(),
+          cliente_nombre:r.Cliente||r.cliente_nombre||'',
+          bolsas:parseInt(r.Unidades||r.bolsas)||0,
+          total:parseInt(r.Total||r.total)||0,
+          medio_pago:r.MedioPago||r.medio_pago||'Transferencia',
+          estado:r.Estado||r.estado||'PAGADO',
+          vendedor:r.Vendedor||r.vendedor||'',
+          importacion:parseInt(r.Lote||r.importacion)||1,
+          notas:r.Notas||r.notas||'',
+        })).filter(r=>r.fecha&&r.total>0);
+      } else if(modulo==='clientes'){
+        tabla='clientes';
+        records=rows.map(r=>({
+          nombre:r.Nombre||r.nombre||'',
+          tipo:r.Segmento||r.tipo||'Prospecto',
+          contacto:r.Contacto||r.contacto||'',
+          telefono:r.Telefono||r.telefono||'',
+          email:r.Email||r.email||'',
+          comuna:r.Comuna||r.comuna||'',
+          region:r.Region||r.region||'',
+          notas:r.Notas||r.notas||'',
+        })).filter(r=>r.nombre);
+      } else if(modulo==='productos'){
+        tabla='productos';
+        records=rows.map(r=>({
+          nombre:r.Nombre||r.nombre||'',
+          sku:r.SKU||r.sku||'',
+          formato:r.Formato||r.formato||'',
+          descripcion:r.Descripcion||r.descripcion||'',
+          precio_unitario:parseInt(r.PrecioUnitario||r.precio_unitario)||0,
+          precio_partner:parseInt(r.PrecioPartner||r.precio_partner)||null,
+          categoria:r.Categoria||r.categoria||'arena',
+          activo:(r.Activo||r.activo||'Si').toString().toLowerCase()!=='no',
+        })).filter(r=>r.nombre);
+      } else if(modulo==='gastos'){
+        tabla='gastos';
+        records=rows.map(r=>({
+          fecha:r.Fecha||r.fecha||td(),
+          categoria:r.Categoria||r.categoria||'operacion',
+          detalle:r.Detalle||r.detalle||'',
+          monto:parseInt(r.Monto||r.monto)||0,
+          responsable:r.Responsable||r.responsable||'',
+          importacion:parseInt(r.Lote||r.importacion)||1,
+        })).filter(r=>r.fecha&&r.monto>0);
+      }
+
+      if(!records.length){toast('No se encontraron filas válidas. Verifica el formato.',false);return}
+      if(!confirm(`¿Importar ${records.length} registros a "${modulo}"? Se agregarán sin eliminar los existentes.`))return;
+      const{error}=await sb.from(tabla).insert(records);
+      if(error){toast('Error al importar: '+error.message,false);return}
+      toast(`✓ ${records.length} registros importados correctamente`);
+      loadAll();
+    }catch(err){toast('Error al leer el archivo: '+err.message,false)}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 </script>
 </body>
 </html>
