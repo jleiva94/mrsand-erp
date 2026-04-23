@@ -1,1 +1,1289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MR. SAND — ERP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --gold: #F5A623;--gold-dim: #C4841C;--gold-bright: #FFD166;
+  --bg: #0A0A0A;--bg2: #111111;--bg3: #181818;--bg4: #1F1F1F;
+  --border: #2A2A2A;--border2: #333333;
+  --text: #F0EDE6;--text2: #A09A90;--text3: #6A6460;
+  --green: #2ECC71;--red: #E74C3C;--blue: #3498DB;--purple: #9B59B6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);font-family:'Barlow',sans-serif;color:var(--text);overflow:hidden}
 
+/* LOGIN */
+#login-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:1000;
+}
+.login-box{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:6px;padding:40px;width:360px;
+}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:6px;color:var(--gold);text-shadow:0 0 30px rgba(245,166,35,0.4);text-align:center;margin-bottom:4px}
+.login-sub{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-label{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;display:block}
+.login-input{width:100%;padding:10px 12px;font-size:13px;border:1px solid var(--border2);border-radius:3px;background:var(--bg3);color:var(--text);font-family:'Barlow',sans-serif;transition:border-color 0.15s}
+.login-input:focus{outline:none;border-color:var(--gold)}
+.login-error{color:var(--red);font-size:11px;margin-bottom:12px;text-align:center;display:none}
+.login-btn{width:100%;padding:12px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--gold);color:#000;border:none;border-radius:3px;cursor:pointer;font-family:'Barlow',sans-serif;transition:background 0.15s;margin-top:6px}
+.login-btn:hover{background:var(--gold-bright)}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed}
+
+/* LAYOUT */
+.erp{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:200px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.logo-area{padding:20px 16px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#1a1200 0%,var(--bg2) 100%)}
+.logo-main{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--gold);text-shadow:0 0 20px rgba(245,166,35,0.4);line-height:1}
+.logo-sub{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-section{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;padding:14px 16px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;font-size:12px;font-weight:500;letter-spacing:0.5px;color:var(--text3);border-left:2px solid transparent;transition:all 0.15s;text-transform:uppercase}
+.nav-item:hover{color:var(--text);background:var(--bg3)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:linear-gradient(90deg,rgba(245,166,35,0.08) 0%,transparent 100%)}
+.nav-icon{width:14px;height:14px;flex-shrink:0;opacity:0.8}
+.nav-item.active .nav-icon{opacity:1}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)}
+.user-info{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.user-dot{width:7px;height:7px;background:var(--green);border-radius:50%}
+.logout-btn{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;letter-spacing:0.5px;background:none;border:none;font-family:'Barlow',sans-serif;padding:0}
+.logout-btn:hover{color:var(--gold)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.topbar{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--text)}
+.topbar-badge{font-size:10px;color:var(--gold);background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);border-radius:3px;padding:2px 8px;letter-spacing:1px;text-transform:uppercase}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* BUTTONS */
+.btn{padding:7px 16px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--text2);cursor:pointer;font-family:'Barlow',sans-serif;transition:all 0.15s}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn-gold{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700}
+.btn-gold:hover{background:var(--gold-bright);border-color:var(--gold-bright);color:#000}
+.btn-red{background:rgba(231,76,60,0.15);color:var(--red);border-color:rgba(231,76,60,0.3)}
+.btn-red:hover{background:rgba(231,76,60,0.25);border-color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:10px}
+
+/* SECTIONS */
+.section{display:none;flex:1;overflow-y:auto;padding:20px 24px}
+.section.active{display:block}
+
+/* METRICS */
+.metric-grid{display:grid;gap:10px;margin-bottom:18px}
+.metric-grid-4{grid-template-columns:repeat(4,1fr)}
+.metric-grid-3{grid-template-columns:repeat(3,1fr)}
+.metric-grid-2{grid-template-columns:repeat(2,1fr)}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:14px 16px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity 0.3s}
+.metric-card:hover::before{opacity:0.4}
+.metric-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.metric-value{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:var(--text);line-height:1}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:4px}
+.metric-up{color:var(--green)}.metric-down{color:var(--red)}.metric-gold{color:var(--gold)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:12px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:1.5px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+
+/* TABLES */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-size:9px;color:var(--text3);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3)}
+th.right{text-align:right}
+td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(245,166,35,0.03)}
+td.mono{font-family:'Barlow Condensed',sans-serif;font-size:13px}
+td.right{text-align:right}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-green{background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.2)}
+.badge-red{background:rgba(231,76,60,0.15);color:#E74C3C;border:1px solid rgba(231,76,60,0.2)}
+.badge-gold{background:rgba(245,166,35,0.15);color:var(--gold);border:1px solid rgba(245,166,35,0.2)}
+.badge-blue{background:rgba(52,152,219,0.15);color:#3498DB;border:1px solid rgba(52,152,219,0.2)}
+.badge-gray{background:rgba(160,154,144,0.12);color:var(--text2);border:1px solid var(--border)}
+
+/* SEARCH & FILTERS */
+.search-bar{width:100%;padding:8px 12px;font-size:12px;border:1px solid var(--border);border-radius:3px;background:var(--bg3);color:var(--text);margin-bottom:12px;font-family:'Barlow',sans-serif;transition:border-color 0.15s}
+.search-bar:focus{outline:none;border-color:var(--gold)}
+.search-bar::placeholder{color:var(--text3)}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.filter-select{padding:6px 10px;font-size:11px;letter-spacing:0.5px;border:1px solid var(--border);border-radius:3px;background:var(--bg3);color:var(--text2);font-family:'Barlow',sans-serif;cursor:pointer;text-transform:uppercase}
+.filter-select:focus{outline:none;border-color:var(--gold)}
+
+/* CHARTS */
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:90px;padding-bottom:20px;position:relative}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.bar-el{width:100%;border-radius:1px 1px 0 0;transition:opacity 0.2s;min-height:2px}
+.bar-lbl{font-size:9px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;position:absolute;bottom:0}
+.progress-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.progress-label{font-size:11px;color:var(--text2);width:80px;flex-shrink:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.progress-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width 0.5s}
+.progress-val{font-size:11px;color:var(--text3);min-width:40px;text-align:right}
+
+/* IMPORT CARDS */
+.import-card{border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:12px;background:var(--bg2);transition:border-color 0.2s}
+.import-card:hover{border-color:var(--border2)}
+.import-card.active-import{border-color:rgba(245,166,35,0.3)}
+.import-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.import-name{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--text)}
+.import-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.import-stat{background:var(--bg3);border-radius:3px;padding:10px 12px}
+.import-stat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.import-stat-val{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;color:var(--text)}
+
+/* CF */
+.cf-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:14px}
+.cf-type-in{border-top:2px solid var(--green)}.cf-type-out{border-top:2px solid var(--red)}
+.cf-type-net{border-top:2px solid var(--gold)}.cf-type-cash{border-top:2px solid var(--blue)}
+
+/* P&L */
+.pl-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.pl-row:last-child{border-bottom:none}
+.pl-row.total{padding-top:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.5px}
+.pl-row.section-head{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding-bottom:4px;padding-top:12px;border-bottom:none}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:center;justify-content:center;display:none}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;width:520px;max-height:85vh;overflow-y:auto;padding:24px}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--gold);margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid-1{display:grid;grid-template-columns:1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase}
+.field input,.field select,.field textarea{padding:8px 10px;font-size:12px;border:1px solid var(--border2);border-radius:3px;background:var(--bg3);color:var(--text);font-family:'Barlow',sans-serif;transition:border-color 0.15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold)}
+.field select option{background:#1F1F1F}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:12px 16px;font-size:12px;z-index:999;opacity:0;transform:translateY(10px);transition:all 0.25s;max-width:300px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.toast-ok{border-left:3px solid var(--green);color:var(--green)}
+.toast.toast-err{border-left:3px solid var(--red);color:var(--red)}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:12px;letter-spacing:1px;text-transform:uppercase}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.tag{font-size:9px;padding:1px 6px;border-radius:2px;display:inline-block;text-transform:uppercase;letter-spacing:0.8px}
+.tag-gold{background:rgba(245,166,35,0.1);color:var(--gold)}
+.tag-green{background:rgba(46,204,113,0.1);color:var(--green)}
+.tag-red{background:rgba(231,76,60,0.1);color:var(--red)}
+select option{background:#1F1F1F;color:var(--text)}
+.action-cell{display:flex;gap:4px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">MR.SAND</div>
+    <div class="login-sub">Sistema de gestión · Acceso privado</div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input type="email" class="login-input" id="login-email" placeholder="tu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Contraseña</label>
+      <input type="password" class="login-input" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="login-error">Email o contraseña incorrectos</div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL VENTAS -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal">
+    <div class="modal-title" id="modal-venta-title">Nueva Venta</div>
+    <input type="hidden" id="venta-edit-id">
+    <div class="form-grid">
+      <div class="field"><label>Cliente</label>
+        <select id="v-cliente-select">
+          <option value="">Seleccionar cliente...</option>
+        </select>
+      </div>
+      <div class="field"><label>Vendedor</label>
+        <select id="v-vendedor">
+          <option>José</option><option>Javier</option><option>Diego</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha</label><input type="date" id="v-fecha"></div>
+      <div class="field"><label>Bolsas</label><input type="number" id="v-bolsas" min="1" placeholder="Ej: 10"></div>
+      <div class="field"><label>Total CLP</label><input type="number" id="v-total" min="0" placeholder="Ej: 59900"></div>
+      <div class="field"><label>Medio de pago</label>
+        <select id="v-medio">
+          <option>Efectivo</option><option>Transferencia</option><option>Cheque</option><option>Pago WEB</option>
+        </select>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="v-estado">
+          <option value="PAGADO">Pagado</option><option value="POR PAGAR">Por pagar</option>
+        </select>
+      </div>
+      <div class="field"><label>Importación (lote)</label>
+        <select id="v-imp">
+          <option value="1">Import 1</option><option value="2" selected>Import 2</option><option value="3">Import 3</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid-1" style="margin-top:10px">
+      <div class="field"><label>Notas (opcional)</label><textarea id="v-notas" rows="2" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-venta')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-save-venta" onclick="saveVenta()">Guardar Venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENTES -->
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-title" id="modal-cliente-title">Nuevo Cliente</div>
+    <input type="hidden" id="cli-edit-id">
+    <div class="form-grid">
+      <div class="field" style="grid-column:1/-1"><label>Nombre / Razón Social</label><input type="text" id="cli-nombre" placeholder="Ej: Veterinaria San José"></div>
+      <div class="field"><label>Tipo</label>
+        <select id="cli-tipo">
+          <option value="Cliente">Cliente</option><option value="Partner">Partner</option>
+        </select>
+      </div>
+      <div class="field"><label>Contacto</label><input type="text" id="cli-contacto" placeholder="Nombre contacto"></div>
+      <div class="field"><label>Teléfono</label><input type="text" id="cli-telefono" placeholder="+56 9 xxxx xxxx"></div>
+      <div class="field"><label>Email</label><input type="email" id="cli-email" placeholder="correo@empresa.cl"></div>
+      <div class="field"><label>Comuna</label><input type="text" id="cli-comuna" placeholder="Ej: Talca"></div>
+      <div class="field"><label>Región</label><input type="text" id="cli-region" placeholder="Ej: Maule"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveCliente()">Guardar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GASTOS -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <div class="modal-title" id="modal-gasto-title">Nuevo Gasto</div>
+    <input type="hidden" id="gasto-edit-id">
+    <div class="form-grid">
+      <div class="field"><label>Fecha</label><input type="date" id="g-fecha"></div>
+      <div class="field"><label>Categoría</label>
+        <select id="g-cat">
+          <option value="import">Importación</option>
+          <option value="operacion">Operación</option>
+          <option value="marketing">Marketing</option>
+          <option value="logistica">Logística</option>
+          <option value="gastos">Gastos admin</option>
+          <option value="iva">IVA</option>
+          <option value="imposiciones">Imposiciones</option>
+          <option value="patrimonio">Patrimonio</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1"><label>Detalle</label><input type="text" id="g-detalle" placeholder="Descripción del gasto"></div>
+      <div class="field"><label>Monto CLP</label><input type="number" id="g-monto" min="0" placeholder="Ej: 50000"></div>
+      <div class="field"><label>Responsable</label><input type="text" id="g-resp" placeholder="Ej: José Leiva"></div>
+      <div class="field"><label>Importación (lote)</label>
+        <select id="g-imp">
+          <option value="1">Import 1</option><option value="2" selected>Import 2</option><option value="3">Import 3</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveGasto()">Guardar Gasto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MERMA -->
+<div class="modal-overlay" id="modal-merma">
+  <div class="modal">
+    <div class="modal-title" id="modal-merma-title">Registrar Merma / Salida</div>
+    <input type="hidden" id="merma-edit-id">
+    <div class="form-grid">
+      <div class="field"><label>Fecha</label><input type="date" id="m-fecha"></div>
+      <div class="field"><label>Cantidad (bolsas)</label><input type="number" id="m-cant" min="1" placeholder="Ej: 5"></div>
+      <div class="field" style="grid-column:1/-1"><label>Descripción</label><input type="text" id="m-desc" placeholder="Ej: Sacos rotos descarga"></div>
+      <div class="field"><label>Responsable</label><input type="text" id="m-resp" placeholder="Ej: José L."></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-merma')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveMerma()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ERP APP -->
+<div class="erp" id="erp-app" style="display:none">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-area">
+    <div class="logo-main">MR.SAND</div>
+    <div class="logo-sub">Sistema de gestión</div>
+  </div>
+  <div class="nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="show('dashboard',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-section">Operación</div>
+    <div class="nav-item" onclick="show('importaciones',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v10M4 8l4 4 4-4"/><path d="M2 13h12"/></svg>
+      Importaciones
+    </div>
+    <div class="nav-item" onclick="show('inventario',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="10" rx="1"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/></svg>
+      Inventario
+    </div>
+    <div class="nav-item" onclick="show('ventas',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg>
+      Ventas
+    </div>
+    <div class="nav-item" onclick="show('crm',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      CRM Clientes
+    </div>
+    <div class="nav-section">Finanzas</div>
+    <div class="nav-item" onclick="show('flujo',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8c1-3 3-5 5-5s4 6 6 3"/><path d="M13 6l2 2-2 2"/></svg>
+      Flujo de Caja
+    </div>
+    <div class="nav-item" onclick="show('gastos',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 6h14"/></svg>
+      Gastos
+    </div>
+    <div class="nav-item" onclick="show('finanzas',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11l4-4 3 2.5L14 4"/><path d="M11 4h3v3"/></svg>
+      P&amp;L / Finanzas
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-info"><span class="user-dot"></span><span id="user-email-display" style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div>
+    <div id="sync-status" style="margin-bottom:6px">● Conectado</div>
+    <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-badge" id="page-badge">Import 1+2+3</div>
+  </div>
+  <div class="topbar-actions" id="topbar-actions">
+    <span style="font-size:10px;color:var(--text3)" id="last-update"></span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+  <div class="metric-grid metric-grid-4">
+    <div class="metric-card"><div class="metric-label">Ventas totales</div><div class="metric-value metric-gold" id="dash-ventas-total">—</div><div class="metric-sub" id="dash-ventas-sub">—</div></div>
+    <div class="metric-card"><div class="metric-label">Gastos totales</div><div class="metric-value metric-down" id="dash-gastos-total">—</div><div class="metric-sub" id="dash-gastos-sub">—</div></div>
+    <div class="metric-card"><div class="metric-label">Utilidad bruta</div><div class="metric-value" id="dash-utilidad">—</div><div class="metric-sub">Ventas - Gastos</div></div>
+    <div class="metric-card"><div class="metric-label">Clientes activos</div><div class="metric-value" id="dash-clientes">—</div><div class="metric-sub" id="dash-cli-sub">—</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Ventas mensuales</div></div>
+      <div class="chart-bars" id="dash-monthly-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Distribución gastos</div></div>
+      <div id="dash-gasto-dist" style="margin-top:4px"></div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Top clientes</div></div>
+      <table><thead><tr><th>Cliente</th><th>Tipo</th><th class="right">Total CLP</th><th class="right">Bolsas</th></tr></thead>
+      <tbody id="dash-top-clients"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Rendimiento vendedores</div></div>
+      <div id="dash-vendedores" style="margin-top:4px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORTACIONES -->
+<div id="importaciones" class="section">
+  <div id="import-cards-container"><div class="loading">Cargando...</div></div>
+</div>
+
+<!-- INVENTARIO -->
+<div id="inventario" class="section">
+  <div class="metric-grid metric-grid-3">
+    <div class="metric-card"><div class="metric-label">Stock Import 2 (estimado)</div><div class="metric-value metric-gold" id="inv-stock2">—</div><div class="metric-sub">bolsas disponibles</div></div>
+    <div class="metric-card"><div class="metric-label">Mermas registradas</div><div class="metric-value" id="inv-mermas">—</div><div class="metric-sub">sacos sin ingreso</div></div>
+    <div class="metric-card"><div class="metric-label">Import 3</div><div class="metric-value metric-gold" id="inv-stock3">~7.260</div><div class="metric-sub">en proceso de ingreso</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Mermas y salidas sin venta</div>
+      <button class="btn btn-gold btn-sm" onclick="openModal('modal-merma','nueva')">+ Registrar merma</button>
+    </div>
+    <table>
+      <thead><tr><th>Fecha</th><th>Cant.</th><th>Detalle</th><th>Responsable</th><th class="right">Acciones</th></tr></thead>
+      <tbody id="mermas-table"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Histórico de stock por importación</div></div>
+    <table>
+      <thead><tr><th>Importación</th><th class="right">Ingresadas</th><th class="right">Vendidas</th><th class="right">Mermas</th><th class="right">Stock</th><th>Estado</th></tr></thead>
+      <tbody id="inv-tabla-hist"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- VENTAS -->
+<div id="ventas" class="section">
+  <div class="metric-grid metric-grid-4" style="margin-bottom:14px">
+    <div class="metric-card"><div class="metric-label">Total ventas</div><div class="metric-value metric-gold" id="v-total">—</div></div>
+    <div class="metric-card"><div class="metric-label">Transacciones</div><div class="metric-value" id="v-count">—</div></div>
+    <div class="metric-card"><div class="metric-label">Bolsas vendidas</div><div class="metric-value" id="v-sacos">—</div></div>
+    <div class="metric-card"><div class="metric-label">Ticket promedio</div><div class="metric-value" id="v-ticket">—</div></div>
+  </div>
+  <div class="filter-row">
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-venta','nueva')">+ Nueva venta</button>
+    <select class="filter-select" id="import-filter" onchange="renderVentas()">
+      <option value="all">Todos los lotes</option>
+      <option value="1">Import 1</option><option value="2">Import 2</option><option value="3">Import 3</option>
+    </select>
+    <select class="filter-select" id="vendedor-filter" onchange="renderVentas()">
+      <option value="all">Todos los vendedores</option>
+      <option value="José">José</option><option value="Javier">Javier</option><option value="Diego">Diego</option>
+    </select>
+    <select class="filter-select" id="estado-filter" onchange="renderVentas()">
+      <option value="all">Todos los estados</option>
+      <option value="PAGADO">Pagado</option><option value="POR PAGAR">Por pagar</option>
+    </select>
+    <input class="search-bar" style="margin:0;flex:1;min-width:160px" placeholder="Buscar cliente..." id="venta-search" oninput="renderVentas()">
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+      <table><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Vendedor</th><th class="right">Bolsas</th><th class="right">Total</th><th>Pago</th><th>Estado</th><th>Lote</th><th class="right">Acciones</th></tr></thead>
+      <tbody id="ventas-table"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- CRM -->
+<div id="crm" class="section">
+  <div class="metric-grid metric-grid-4" style="margin-bottom:14px">
+    <div class="metric-card"><div class="metric-label">Total clientes</div><div class="metric-value" id="crm-total">—</div></div>
+    <div class="metric-card"><div class="metric-label">Partners</div><div class="metric-value metric-gold" id="crm-partners">—</div><div class="metric-sub">alto volumen</div></div>
+    <div class="metric-card"><div class="metric-label">Con deuda</div><div class="metric-value metric-down" id="crm-porcobrar">—</div></div>
+    <div class="metric-card"><div class="metric-label">Monto pendiente</div><div class="metric-value metric-down" id="crm-monto-pend">—</div></div>
+  </div>
+  <div class="filter-row">
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-cliente','nuevo')">+ Nuevo cliente</button>
+    <select class="filter-select" id="crm-filter" onchange="renderCRM()">
+      <option value="all">Todos</option><option value="Partner">Partners</option><option value="Cliente">Clientes</option>
+    </select>
+    <input class="search-bar" style="margin:0;flex:1;min-width:160px" placeholder="Buscar cliente..." id="crm-search" oninput="renderCRM()">
+  </div>
+  <div id="crm-list"></div>
+</div>
+
+<!-- FLUJO DE CAJA -->
+<div id="flujo" class="section">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    <div class="cf-card cf-type-in"><div class="metric-label">Ingresos totales</div><div class="metric-value metric-up" id="cf-ingresos">—</div><div class="metric-sub">Ventas cobradas</div></div>
+    <div class="cf-card cf-type-out"><div class="metric-label">Egresos totales</div><div class="metric-value metric-down" id="cf-egresos">—</div><div class="metric-sub">Todos los gastos</div></div>
+    <div class="cf-card cf-type-net"><div class="metric-label">Flujo neto</div><div class="metric-value" id="cf-neto">—</div><div class="metric-sub">Ingresos - Egresos</div></div>
+    <div class="cf-card cf-type-cash"><div class="metric-label">Por cobrar</div><div class="metric-value metric-gold" id="cf-porcobrar">—</div><div class="metric-sub">Ventas pendientes</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Flujo mensual</div>
+      <div style="display:flex;gap:12px;font-size:10px;color:var(--text3)"><span><span style="color:var(--green)">■</span> Ingresos</span><span><span style="color:var(--red)">■</span> Egresos</span></div>
+    </div>
+    <div id="cf-chart" style="display:flex;align-items:flex-end;gap:6px;height:120px;padding-bottom:24px;position:relative"></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Detalle por mes</div></div>
+      <table><thead><tr><th>Mes</th><th class="right">Ingresos</th><th class="right">Egresos</th><th class="right">Neto</th><th class="right">Acum.</th></tr></thead>
+      <tbody id="cf-table"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Egresos por categoría</div></div>
+      <div id="cf-cat-chart" style="margin-top:4px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Movimientos</div>
+      <select class="filter-select" id="cf-type-filter" onchange="renderFlujoCaja()" style="font-size:10px">
+        <option value="all">Todos</option><option value="ingreso">Solo ingresos</option><option value="egreso">Solo egresos</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Categoría</th><th class="right">Monto</th></tr></thead>
+      <tbody id="cf-movimientos"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- GASTOS -->
+<div id="gastos" class="section">
+  <div class="metric-grid metric-grid-4" style="margin-bottom:14px">
+    <div class="metric-card"><div class="metric-label">Total gastos</div><div class="metric-value metric-down" id="g-total">—</div></div>
+    <div class="metric-card"><div class="metric-label">Operacional</div><div class="metric-value" id="g-op">—</div></div>
+    <div class="metric-card"><div class="metric-label">Marketing</div><div class="metric-value" id="g-mkt">—</div></div>
+    <div class="metric-card"><div class="metric-label">Logística</div><div class="metric-value" id="g-log">—</div></div>
+  </div>
+  <div class="filter-row">
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-gasto','nuevo')">+ Nuevo gasto</button>
+    <select class="filter-select" id="gasto-import-filter" onchange="renderGastos()">
+      <option value="all">Todos los lotes</option>
+      <option value="1">Import 1</option><option value="2">Import 2</option><option value="3">Import 3</option>
+    </select>
+    <select class="filter-select" id="gasto-cat-filter" onchange="renderGastos()">
+      <option value="all">Todas las categorías</option>
+      <option value="import">Importación</option><option value="operacion">Operación</option>
+      <option value="marketing">Marketing</option><option value="logistica">Logística</option>
+      <option value="gastos">Gastos admin</option><option value="iva">IVA</option>
+      <option value="imposiciones">Imposiciones</option><option value="patrimonio">Patrimonio</option>
+    </select>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Categoría</th><th>Detalle</th><th>Responsable</th><th class="right">Monto</th><th>Lote</th><th class="right">Acciones</th></tr></thead>
+        <tbody id="gastos-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- FINANZAS -->
+<div id="finanzas" class="section">
+  <div class="metric-grid metric-grid-3" style="margin-bottom:16px">
+    <div class="metric-card"><div class="metric-label">Ingresos totales</div><div class="metric-value metric-up" id="fin-ingresos">—</div></div>
+    <div class="metric-card"><div class="metric-label">Costos totales</div><div class="metric-value metric-down" id="fin-costos">—</div></div>
+    <div class="metric-card"><div class="metric-label">Utilidad bruta</div><div class="metric-value metric-gold" id="fin-utilidad">—</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><div class="card-title">P&amp;L — Import 2</div></div>
+      <div id="pl-import2"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Gastos por categoría</div></div>
+      <div id="fin-cat-chart" style="margin-top:4px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Resumen por importación</div></div>
+    <table>
+      <thead><tr><th>Lote</th><th class="right">USD total</th><th class="right">TC</th><th class="right">CLP pagado</th><th class="right">IVA aduana</th><th class="right">Ventas CLP</th><th>Estado</th></tr></thead>
+      <tbody id="fin-import-tabla"></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- end content -->
+</div><!-- end main -->
+</div><!-- end erp -->
+
+<script>
+// ===================== CONFIG SUPABASE =====================
+// INSTRUCCIONES: Reemplaza estos valores con los de tu proyecto Supabase
+// Settings → API → Project URL y anon public key
+const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
+const SUPABASE_KEY = 'TU_ANON_KEY';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===================== ESTADO GLOBAL =====================
+let ventas = [], gastos = [], clientes = [], mermas = [], importaciones = [];
+let currentUser = null;
+
+const catColors = {
+  import:'#F5A623',operacion:'#3498DB',gastos:'#888780',
+  marketing:'#E67E22',logistica:'#F39C12',iva:'#E74C3C',
+  imposiciones:'#9B59B6',patrimonio:'#2ECC71'
+};
+
+// ===================== HELPERS =====================
+function fmt(n){return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n)}
+function fmtS(n){
+  if(!n||isNaN(n))return'—';
+  if(n>=1000000)return'$'+(n/1000000).toFixed(1)+'M';
+  if(n>=1000)return'$'+(n/1000).toFixed(0)+'K';
+  return fmt(n);
+}
+function fmtDate(s){if(!s)return'—';const [y,m,d]=s.split('-');return`${d}/${m}/${y.slice(2)}`}
+function monthKey(s){return s?s.slice(0,7):''}
+function monthLabel(k){
+  if(!k)return'';
+  const [y,m]=k.split('-');
+  const names=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return names[parseInt(m)-1]+' '+y.slice(2);
+}
+function today(){return new Date().toISOString().slice(0,10)}
+function toast(msg, ok=true){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast show '+(ok?'toast-ok':'toast-err');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ===================== AUTH =====================
+sb.auth.onAuthStateChange((event, session) => {
+  if(session){
+    currentUser = session.user;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('erp-app').style.display='flex';
+    document.getElementById('user-email-display').textContent = session.user.email;
+    loadAll();
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('erp-app').style.display='none';
+  }
+});
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  btn.disabled=true; btn.textContent='Ingresando...'; err.style.display='none';
+  const {error} = await sb.auth.signInWithPassword({email, password:pass});
+  if(error){
+    err.style.display='block'; err.textContent=error.message;
+    btn.disabled=false; btn.textContent='Ingresar';
+  }
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin()});
+
+// ===================== LOAD DATA =====================
+async function loadAll(){
+  document.getElementById('sync-status').textContent='● Sincronizando...';
+  try {
+    const [rv, rg, rc, rm, ri] = await Promise.all([
+      sb.from('ventas').select('*').order('fecha', {ascending:false}),
+      sb.from('gastos').select('*').order('fecha', {ascending:false}),
+      sb.from('clientes').select('*').order('nombre'),
+      sb.from('mermas').select('*').order('fecha', {ascending:false}),
+      sb.from('importaciones').select('*').order('id'),
+    ]);
+    ventas = rv.data||[];
+    gastos = rg.data||[];
+    clientes = rc.data||[];
+    mermas = rm.data||[];
+    importaciones = ri.data||[];
+    document.getElementById('sync-status').textContent='● Conectado';
+    document.getElementById('last-update').textContent='Actualizado: '+new Date().toLocaleTimeString('es-CL');
+    renderAll();
+  } catch(e){
+    document.getElementById('sync-status').textContent='● Error de conexión';
+    toast('Error al cargar datos: '+e.message, false);
+  }
+}
+
+function renderAll(){
+  renderDashboard();
+  renderImportaciones();
+  renderInventario();
+  renderVentas();
+  renderCRM();
+  renderGastos();
+  renderFlujoCaja();
+  renderFinanzas();
+  populateClienteSelect();
+}
+
+// ===================== NAVIGATION =====================
+function show(id, el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const titles={dashboard:'Dashboard',importaciones:'Importaciones',inventario:'Inventario',ventas:'Ventas',crm:'CRM Clientes',flujo:'Flujo de Caja',gastos:'Gastos',finanzas:'P&L / Finanzas'};
+  document.getElementById('page-title').textContent=titles[id]||id;
+}
+
+// ===================== MODALES =====================
+function openModal(id, mode, data=null){
+  document.getElementById(id).classList.add('open');
+  if(id==='modal-venta'){
+    document.getElementById('modal-venta-title').textContent = mode==='nueva'?'Nueva Venta':'Editar Venta';
+    document.getElementById('venta-edit-id').value = data?data.id:'';
+    document.getElementById('v-fecha').value = data?data.fecha:today();
+    document.getElementById('v-cliente-select').value = data?data.cliente_id:'';
+    document.getElementById('v-vendedor').value = data?data.vendedor:'José';
+    document.getElementById('v-bolsas').value = data?data.bolsas:'';
+    document.getElementById('v-total').value = data?data.total:'';
+    document.getElementById('v-medio').value = data?data.medio_pago:'Efectivo';
+    document.getElementById('v-estado').value = data?data.estado:'PAGADO';
+    document.getElementById('v-imp').value = data?data.importacion:2;
+    document.getElementById('v-notas').value = data?data.notas||'':'';
+  }
+  if(id==='modal-cliente'){
+    document.getElementById('modal-cliente-title').textContent = mode==='nuevo'?'Nuevo Cliente':'Editar Cliente';
+    document.getElementById('cli-edit-id').value = data?data.id:'';
+    document.getElementById('cli-nombre').value = data?data.nombre:'';
+    document.getElementById('cli-tipo').value = data?data.tipo:'Cliente';
+    document.getElementById('cli-contacto').value = data?data.contacto||'':'';
+    document.getElementById('cli-telefono').value = data?data.telefono||'':'';
+    document.getElementById('cli-email').value = data?data.email||'':'';
+    document.getElementById('cli-comuna').value = data?data.comuna||'':'';
+    document.getElementById('cli-region').value = data?data.region||'':'';
+  }
+  if(id==='modal-gasto'){
+    document.getElementById('modal-gasto-title').textContent = mode==='nuevo'?'Nuevo Gasto':'Editar Gasto';
+    document.getElementById('gasto-edit-id').value = data?data.id:'';
+    document.getElementById('g-fecha').value = data?data.fecha:today();
+    document.getElementById('g-cat').value = data?data.categoria:'operacion';
+    document.getElementById('g-detalle').value = data?data.detalle:'';
+    document.getElementById('g-monto').value = data?data.monto:'';
+    document.getElementById('g-resp').value = data?data.responsable||'José Leiva':'José Leiva';
+    document.getElementById('g-imp').value = data?data.importacion:2;
+  }
+  if(id==='modal-merma'){
+    document.getElementById('modal-merma-title').textContent = mode==='nueva'?'Nueva Merma':'Editar Merma';
+    document.getElementById('merma-edit-id').value = data?data.id:'';
+    document.getElementById('m-fecha').value = data?data.fecha:today();
+    document.getElementById('m-cant').value = data?data.cantidad:'';
+    document.getElementById('m-desc').value = data?data.descripcion||'':'';
+    document.getElementById('m-resp').value = data?data.responsable||'José L.':'José L.';
+  }
+}
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+
+// Cerrar modal al hacer click fuera
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click', e=>{if(e.target===o)o.classList.remove('open')});
+});
+
+function populateClienteSelect(){
+  const sel = document.getElementById('v-cliente-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- Sin cliente registrado --</option>' +
+    clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+// ===================== CRUD VENTAS =====================
+async function saveVenta(){
+  const editId = document.getElementById('venta-edit-id').value;
+  const clienteId = document.getElementById('v-cliente-select').value;
+  const clienteNombre = clienteId ? clientes.find(c=>c.id===clienteId)?.nombre||'' : '';
+  const data = {
+    cliente_id: clienteId||null,
+    cliente_nombre: clienteNombre,
+    fecha: document.getElementById('v-fecha').value,
+    bolsas: parseInt(document.getElementById('v-bolsas').value)||0,
+    total: parseInt(document.getElementById('v-total').value)||0,
+    medio_pago: document.getElementById('v-medio').value,
+    estado: document.getElementById('v-estado').value,
+    vendedor: document.getElementById('v-vendedor').value,
+    importacion: parseInt(document.getElementById('v-imp').value),
+    notas: document.getElementById('v-notas').value,
+  };
+  if(!data.fecha||!data.bolsas||!data.total){toast('Completa los campos obligatorios',false);return}
+  let err;
+  if(editId){
+    ({error:err}=await sb.from('ventas').update(data).eq('id',editId));
+  } else {
+    ({error:err}=await sb.from('ventas').insert(data));
+  }
+  if(err){toast('Error: '+err.message,false)}
+  else{toast(editId?'Venta actualizada':'Venta guardada');closeModal('modal-venta');loadAll()}
+}
+
+async function deleteVenta(id){
+  if(!confirm('¿Eliminar esta venta?'))return;
+  const {error}=await sb.from('ventas').delete().eq('id',id);
+  if(error){toast('Error: '+error.message,false)}
+  else{toast('Venta eliminada');loadAll()}
+}
+
+async function toggleEstadoVenta(id, currentEstado){
+  const nuevo = currentEstado==='PAGADO'?'POR PAGAR':'PAGADO';
+  const {error}=await sb.from('ventas').update({estado:nuevo}).eq('id',id);
+  if(error){toast('Error: '+error.message,false)}
+  else{toast(`Estado → ${nuevo}`);loadAll()}
+}
+
+// ===================== CRUD CLIENTES =====================
+async function saveCliente(){
+  const editId = document.getElementById('cli-edit-id').value;
+  const data = {
+    nombre: document.getElementById('cli-nombre').value,
+    tipo: document.getElementById('cli-tipo').value,
+    contacto: document.getElementById('cli-contacto').value,
+    telefono: document.getElementById('cli-telefono').value,
+    email: document.getElementById('cli-email').value,
+    comuna: document.getElementById('cli-comuna').value,
+    region: document.getElementById('cli-region').value,
+  };
+  if(!data.nombre){toast('El nombre es obligatorio',false);return}
+  let err;
+  if(editId){
+    ({error:err}=await sb.from('clientes').update(data).eq('id',editId));
+  } else {
+    ({error:err}=await sb.from('clientes').insert(data));
+  }
+  if(err){toast('Error: '+err.message,false)}
+  else{toast(editId?'Cliente actualizado':'Cliente guardado');closeModal('modal-cliente');loadAll()}
+}
+
+async function deleteCliente(id){
+  if(!confirm('¿Eliminar este cliente? (sus ventas no se borran)'))return;
+  const {error}=await sb.from('clientes').delete().eq('id',id);
+  if(error){toast('Error: '+error.message,false)}
+  else{toast('Cliente eliminado');loadAll()}
+}
+
+// ===================== CRUD GASTOS =====================
+async function saveGasto(){
+  const editId = document.getElementById('gasto-edit-id').value;
+  const data = {
+    fecha: document.getElementById('g-fecha').value,
+    categoria: document.getElementById('g-cat').value,
+    detalle: document.getElementById('g-detalle').value,
+    monto: parseInt(document.getElementById('g-monto').value)||0,
+    responsable: document.getElementById('g-resp').value,
+    importacion: parseInt(document.getElementById('g-imp').value),
+  };
+  if(!data.fecha||!data.detalle||!data.monto){toast('Completa los campos obligatorios',false);return}
+  let err;
+  if(editId){
+    ({error:err}=await sb.from('gastos').update(data).eq('id',editId));
+  } else {
+    ({error:err}=await sb.from('gastos').insert(data));
+  }
+  if(err){toast('Error: '+err.message,false)}
+  else{toast(editId?'Gasto actualizado':'Gasto guardado');closeModal('modal-gasto');loadAll()}
+}
+
+async function deleteGasto(id){
+  if(!confirm('¿Eliminar este gasto?'))return;
+  const {error}=await sb.from('gastos').delete().eq('id',id);
+  if(error){toast('Error: '+error.message,false)}
+  else{toast('Gasto eliminado');loadAll()}
+}
+
+// ===================== CRUD MERMAS =====================
+async function saveMerma(){
+  const editId = document.getElementById('merma-edit-id').value;
+  const data = {
+    fecha: document.getElementById('m-fecha').value,
+    cantidad: parseInt(document.getElementById('m-cant').value)||0,
+    descripcion: document.getElementById('m-desc').value,
+    responsable: document.getElementById('m-resp').value,
+  };
+  if(!data.fecha||!data.cantidad){toast('Completa los campos obligatorios',false);return}
+  let err;
+  if(editId){
+    ({error:err}=await sb.from('mermas').update(data).eq('id',editId));
+  } else {
+    ({error:err}=await sb.from('mermas').insert(data));
+  }
+  if(err){toast('Error: '+err.message,false)}
+  else{toast(editId?'Merma actualizada':'Merma registrada');closeModal('modal-merma');loadAll()}
+}
+
+async function deleteMerma(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  const {error}=await sb.from('mermas').delete().eq('id',id);
+  if(error){toast('Error: '+error.message,false)}
+  else{toast('Registro eliminado');loadAll()}
+}
+
+// ===================== RENDER DASHBOARD =====================
+function renderDashboard(){
+  const totalV=ventas.reduce((a,b)=>a+b.total,0);
+  const totalG=gastos.reduce((a,b)=>a+b.monto,0);
+  const utilidad=totalV-totalG;
+  const pendientes=ventas.filter(v=>v.estado==='POR PAGAR').length;
+  document.getElementById('dash-ventas-total').textContent=fmtS(totalV);
+  document.getElementById('dash-ventas-sub').textContent=`${ventas.length} transacciones`;
+  document.getElementById('dash-gastos-total').textContent=fmtS(totalG);
+  document.getElementById('dash-gastos-sub').textContent=`${gastos.length} registros`;
+  document.getElementById('dash-utilidad').textContent=fmtS(utilidad);
+  document.getElementById('dash-utilidad').className='metric-value '+(utilidad>=0?'metric-gold':'metric-down');
+  document.getElementById('dash-clientes').textContent=clientes.length||[...new Set(ventas.map(v=>v.cliente_nombre))].length;
+  document.getElementById('dash-cli-sub').textContent=`${pendientes} ventas por cobrar`;
+  // Monthly chart
+  const byMonth={};
+  ventas.forEach(v=>{const k=monthKey(v.fecha);byMonth[k]=(byMonth[k]||0)+v.total});
+  const keys=Object.keys(byMonth).sort();const vals=keys.map(k=>byMonth[k]);
+  const maxV=Math.max(...vals,1);
+  document.getElementById('dash-monthly-chart').innerHTML=keys.map((k,i)=>`
+    <div class="bar-wrap" title="${monthLabel(k)}: ${fmtS(vals[i])}">
+      <div class="bar-el" style="height:${Math.max(3,Math.round(vals[i]/maxV*80))}px;background:${vals[i]===maxV?'var(--gold)':'rgba(245,166,35,0.45)'}"></div>
+      <div class="bar-lbl">${monthLabel(k).slice(0,3)}</div>
+    </div>`).join('');
+  // Gastos dist
+  const catTotals={};gastos.forEach(g=>{catTotals[g.categoria]=(catTotals[g.categoria]||0)+g.monto});
+  const totalGa=Object.values(catTotals).reduce((a,b)=>a+b,1);
+  document.getElementById('dash-gasto-dist').innerHTML=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([cat,val])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${catColors[cat]||'#888'};margin-right:6px"></span>${cat}</span>
+      <span style="font-size:11px;color:var(--text3)">${Math.round(val/totalGa*100)}% · ${fmtS(val)}</span>
+    </div>`).join('');
+  // Top clients
+  const cliTotals={};
+  ventas.forEach(v=>{const n=v.cliente_nombre||'Sin nombre';cliTotals[n]={t:(cliTotals[n]?.t||0)+v.total,b:(cliTotals[n]?.b||0)+v.bolsas}});
+  const topC=Object.entries(cliTotals).sort((a,b)=>b[1].t-a[1].t).slice(0,7);
+  const maxCT=topC[0]?.[1]?.t||1;
+  document.getElementById('dash-top-clients').innerHTML=topC.map(([n,d])=>`
+    <tr><td style="font-weight:500;font-size:12px">${n}</td>
+    <td><span class="badge ${clientes.find(c=>c.nombre===n)?.tipo==='Partner'?'badge-gold':'badge-gray'}">${clientes.find(c=>c.nombre===n)?.tipo||'—'}</span></td>
+    <td class="right mono" style="color:var(--gold)">${fmtS(d.t)}</td>
+    <td class="right">${d.b}</td></tr>`).join('');
+  // Vendedores
+  const vendStats={};ventas.forEach(v=>{if(v.vendedor)vendStats[v.vendedor]=(vendStats[v.vendedor]||0)+v.bolsas});
+  const maxS=Math.max(...Object.values(vendStats),1);
+  document.getElementById('dash-vendedores').innerHTML=Object.entries(vendStats).sort((a,b)=>b[1]-a[1]).map(([v,s])=>`
+    <div class="progress-row"><div class="progress-label">${v}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(s/maxS*100)}%;background:var(--gold)"></div></div>
+    <div class="progress-val">${s} bolsas</div></div>`).join('');
+}
+
+// ===================== RENDER IMPORTACIONES =====================
+function renderImportaciones(){
+  const v1=ventas.filter(v=>v.importacion===1),v2=ventas.filter(v=>v.importacion===2),v3=ventas.filter(v=>v.importacion===3);
+  const g1=gastos.filter(g=>g.importacion===1),g2=gastos.filter(g=>g.importacion===2),g3=gastos.filter(g=>g.importacion===3);
+  const tv1=v1.reduce((a,b)=>a+b.total,0),tv2=v2.filter(v=>v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
+  const b1=v1.reduce((a,b)=>a+b.bolsas,0),b2=v2.reduce((a,b)=>a+b.bolsas,0);
+  const tg1=g1.reduce((a,b)=>a+b.monto,0),tg2=g2.reduce((a,b)=>a+b.monto,0),tg3=g3.reduce((a,b)=>a+b.monto,0);
+  document.getElementById('import-cards-container').innerHTML=`
+  <div class="import-card">
+    <div class="import-header"><span class="import-name">Import 1 — Arena Bentonita 8kg</span><span class="badge badge-gray">Cerrada</span></div>
+    <div class="import-stat-grid">
+      <div class="import-stat"><div class="import-stat-label">Bolsas importadas</div><div class="import-stat-val">6.000</div></div>
+      <div class="import-stat"><div class="import-stat-label">Bolsas vendidas</div><div class="import-stat-val">${b1.toLocaleString('es-CL')}</div></div>
+      <div class="import-stat"><div class="import-stat-label">Ventas totales</div><div class="import-stat-val" style="color:var(--gold)">${fmtS(tv1)}</div></div>
+      <div class="import-stat"><div class="import-stat-label">Costos</div><div class="import-stat-val" style="color:var(--red)">${fmtS(tg1)}</div></div>
+      <div class="import-stat"><div class="import-stat-label">USD Alibaba</div><div class="import-stat-val">~6.321 USD</div></div>
+      <div class="import-stat"><div class="import-stat-label">TC promedio</div><div class="import-stat-val">$873</div></div>
+    </div>
+  </div>
+  <div class="import-card active-import">
+    <div class="import-header"><span class="import-name">Import 2 — Arena Bentonita Lavanda 8kg</span><span class="badge badge-green">En venta</span></div>
+    <div class="import-stat-grid">
+      <div class="import-stat"><div class="import-stat-label">Bolsas totales</div><div class="import-stat-val">3.309</div></div>
+      <div class="import-stat"><div class="import-stat-label">Bolsas vendidas</div><div class="import-stat-val" style="color:var(--gold)">${b2.toLocaleString('es-CL')}</div></div>
+      <div class="import-stat"><div class="import-stat-label">Stock estimado</div><div class="import-stat-val" style="color:var(--green)">${Math.max(0,3309-b2-mermas.reduce((a,b)=>a+b.cantidad,0)).toLocaleString('es-CL')}</div></div>
+      <div class="import-stat"><div class="import-stat-label">Ventas cobradas</div><div class="import-stat-val" style="color:var(--gold)">${fmtS(tv2)}</div></div>
+      <div class="import-stat"><div class="import-stat-label">Costos</div><div class="import-stat-val" style="color:var(--red)">${fmtS(tg2)}</div></div>
+      <div class="import-stat"><div class="import-stat-label">USD Alibaba</div><div class="import-stat-val">~12.000 USD</div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div class="card-title" style="margin-bottom:10px">Inversores — Import 2</div>
+      <table><thead><tr><th>Inversionista</th><th>Inversión</th><th>Retorno acordado</th></tr></thead>
+      <tbody>
+        <tr><td>Myriam Leiva</td><td>$10.000.000</td><td style="color:var(--gold)">$11.000.000</td></tr>
+        <tr><td>José Leiva</td><td>—</td><td style="color:var(--gold)">$5.839.160</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <div class="import-card">
+    <div class="import-header"><span class="import-name">Import 3 — En proceso</span><span class="badge badge-gold">En tránsito / Descarga</span></div>
+    <div class="import-stat-grid">
+      <div class="import-stat"><div class="import-stat-label">Pago 1 Alibaba</div><div class="import-stat-val">$8.436.602</div></div>
+      <div class="import-stat"><div class="import-stat-label">Pago 2 Alibaba</div><div class="import-stat-val">$11.015.472</div></div>
+      <div class="import-stat"><div class="import-stat-label">IVA aduana</div><div class="import-stat-val" style="color:var(--red)">$3.605.213</div></div>
+      <div class="import-stat"><div class="import-stat-label">Agente Leo</div><div class="import-stat-val">$2.000.000</div></div>
+      <div class="import-stat"><div class="import-stat-label">Total gastado</div><div class="import-stat-val" style="color:var(--red)">${fmtS(tg3)}</div></div>
+      <div class="import-stat"><div class="import-stat-label">USD totales</div><div class="import-stat-val">~20.405 USD</div></div>
+    </div>
+  </div>`;
+}
+
+// ===================== RENDER INVENTARIO =====================
+function renderInventario(){
+  const b2=ventas.filter(v=>v.importacion===2).reduce((a,b)=>a+b.bolsas,0);
+  const b1=ventas.filter(v=>v.importacion===1).reduce((a,b)=>a+b.bolsas,0);
+  const totalMermas=mermas.reduce((a,b)=>a+b.cantidad,0);
+  const stock2=Math.max(0,3309-b2-totalMermas);
+  document.getElementById('inv-stock2').textContent=stock2.toLocaleString('es-CL');
+  document.getElementById('inv-mermas').textContent=totalMermas;
+  document.getElementById('mermas-table').innerHTML=mermas.map(m=>`<tr>
+    <td>${fmtDate(m.fecha)}</td>
+    <td><span class="badge badge-red">${m.cantidad}</span></td>
+    <td>${m.descripcion||'—'}</td>
+    <td style="color:var(--text3)">${m.responsable||'—'}</td>
+    <td><div class="action-cell">
+      <button class="btn btn-sm" onclick='openModal("modal-merma","editar",${JSON.stringify(m)})'>Editar</button>
+      <button class="btn btn-sm btn-red" onclick="deleteMerma('${m.id}')">✕</button>
+    </div></td>
+  </tr>`).join('');
+  document.getElementById('inv-tabla-hist').innerHTML=`
+    <tr><td>Import 1</td><td class="right">6.000</td><td class="right">${b1.toLocaleString('es-CL')}</td><td class="right">—</td><td class="right mono" style="color:var(--text3)">0</td><td><span class="badge badge-gray">Cerrada</span></td></tr>
+    <tr><td>Import 2</td><td class="right">3.309</td><td class="right">${b2.toLocaleString('es-CL')}</td><td class="right">${totalMermas}</td><td class="right mono metric-gold">${stock2.toLocaleString('es-CL')}</td><td><span class="badge badge-green">En venta</span></td></tr>
+    <tr><td>Import 3</td><td class="right">~7.260</td><td class="right">0</td><td class="right">0</td><td class="right mono metric-gold">~7.260</td><td><span class="badge badge-gold">En tránsito</span></td></tr>`;
+}
+
+// ===================== RENDER VENTAS =====================
+function renderVentas(){
+  const imp=document.getElementById('import-filter').value;
+  const vend=document.getElementById('vendedor-filter').value;
+  const est=document.getElementById('estado-filter').value;
+  const q=(document.getElementById('venta-search').value||'').toLowerCase();
+  let rows=ventas.filter(v=>
+    (imp==='all'||v.importacion==imp)&&
+    (vend==='all'||v.vendedor===vend)&&
+    (est==='all'||v.estado===est)&&
+    ((v.cliente_nombre||'').toLowerCase().includes(q))
+  );
+  const totalV=rows.reduce((a,b)=>a+b.total,0);
+  const totalS=rows.reduce((a,b)=>a+b.bolsas,0);
+  document.getElementById('v-total').textContent=fmtS(totalV);
+  document.getElementById('v-count').textContent=rows.length.toLocaleString('es-CL');
+  document.getElementById('v-sacos').textContent=totalS.toLocaleString('es-CL');
+  document.getElementById('v-ticket').textContent=rows.length?fmtS(Math.round(totalV/rows.length)):'—';
+  document.getElementById('ventas-table').innerHTML=rows.slice(0,150).map(v=>`<tr>
+    <td style="color:var(--text3);font-size:10px">${v.id}</td>
+    <td class="mono">${fmtDate(v.fecha)}</td>
+    <td style="font-weight:500">${v.cliente_nombre||'—'}</td>
+    <td style="color:var(--text2)">${v.vendedor||'—'}</td>
+    <td class="right">${v.bolsas}</td>
+    <td class="right mono" style="color:var(--gold)">${fmtS(v.total)}</td>
+    <td style="color:var(--text3);font-size:11px">${v.medio_pago||'—'}</td>
+    <td><span class="badge ${v.estado==='PAGADO'?'badge-green':'badge-red'}" style="cursor:pointer" onclick="toggleEstadoVenta(${v.id},'${v.estado}')" title="Clic para cambiar estado">${v.estado}</span></td>
+    <td><span class="badge badge-gray">I${v.importacion}</span></td>
+    <td><div class="action-cell">
+      <button class="btn btn-sm" onclick='openModal("modal-venta","editar",${JSON.stringify(v)})'>Editar</button>
+      <button class="btn btn-sm btn-red" onclick="deleteVenta(${v.id})">✕</button>
+    </div></td>
+  </tr>`).join('');
+  if(rows.length>150){
+    document.getElementById('ventas-table').innerHTML+=`<tr><td colspan="10" style="text-align:center;color:var(--text3);font-size:11px;padding:10px">... y ${rows.length-150} registros más</td></tr>`;
+  }
+}
+
+// ===================== RENDER CRM =====================
+function renderCRM(){
+  // Construir mapa de ventas por cliente (nombre)
+  const cliMap={};
+  ventas.forEach(v=>{
+    const n=v.cliente_nombre||'Sin nombre';
+    if(!cliMap[n])cliMap[n]={nombre:n,total:0,bolsas:0,txns:0,pendiente:0,ultima:v.fecha};
+    cliMap[n].total+=v.total;cliMap[n].bolsas+=v.bolsas;cliMap[n].txns++;
+    if(v.estado==='POR PAGAR')cliMap[n].pendiente+=v.total;
+    if(v.fecha>cliMap[n].ultima)cliMap[n].ultima=v.fecha;
+  });
+  // Enriquecer con datos del CRM
+  clientes.forEach(c=>{
+    if(!cliMap[c.nombre])cliMap[c.nombre]={nombre:c.nombre,total:0,bolsas:0,txns:0,pendiente:0,ultima:null};
+    cliMap[c.nombre].tipo=c.tipo;cliMap[c.nombre].crmId=c.id;
+    cliMap[c.nombre].contacto=c.contacto;cliMap[c.nombre].telefono=c.telefono;
+    cliMap[c.nombre].email=c.email;cliMap[c.nombre].comuna=c.comuna;
+  });
+  const f=document.getElementById('crm-filter').value;
+  const q=(document.getElementById('crm-search').value||'').toLowerCase();
+  let rows=Object.values(cliMap).sort((a,b)=>b.total-a.total).filter(c=>{
+    if(f==='Partner'&&c.tipo!=='Partner')return false;
+    if(f==='Cliente'&&c.tipo==='Partner')return false;
+    if(q&&!c.nombre.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const partners=rows.filter(c=>c.tipo==='Partner').length;
+  const porcobrar=Object.values(cliMap).filter(c=>c.pendiente>0).length;
+  const montoPend=Object.values(cliMap).reduce((a,b)=>a+b.pendiente,0);
+  document.getElementById('crm-total').textContent=Object.keys(cliMap).length;
+  document.getElementById('crm-partners').textContent=partners;
+  document.getElementById('crm-porcobrar').textContent=porcobrar;
+  document.getElementById('crm-monto-pend').textContent=fmtS(montoPend);
+  const now=new Date();
+  document.getElementById('crm-list').innerHTML=rows.map(c=>{
+    const daysSince=c.ultima?Math.round((now-new Date(c.ultima))/(86400000)):999;
+    const atrasado=daysSince>40;
+    const crmData=clientes.find(x=>x.nombre===c.nombre);
+    return `<div style="border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-bottom:8px;background:var(--bg2)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:600">${c.nombre}</span>
+            <span class="badge ${c.tipo==='Partner'?'badge-gold':'badge-gray'}">${c.tipo||'Cliente'}</span>
+            ${c.crmId?`<button class="btn btn-sm" onclick='openModal("modal-cliente","editar",${JSON.stringify(crmData)})' style="padding:2px 8px;font-size:9px">Editar</button>`:`<button class="btn btn-sm" onclick='openModal("modal-cliente","nuevo")' style="padding:2px 8px;font-size:9px;color:var(--gold)">+ Registrar</button>`}
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">${c.txns} venta${c.txns!==1?'s':''} · ${c.bolsas} bolsas${c.ultima?' · Última: '+fmtDate(c.ultima)+' ('+daysSince+'d)':''}</div>
+          ${c.telefono||c.email||c.comuna?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${[c.telefono,c.email,c.comuna].filter(Boolean).join(' · ')}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-size:15px;font-weight:700;color:var(--gold)">${fmtS(c.total)}</div>
+          ${c.pendiente>0?`<div style="font-size:10px;color:var(--red)">Debe: ${fmtS(c.pendiente)}</div>`:''}
+          ${c.ultima?`<div style="font-size:9px;${atrasado?'color:var(--red)':'color:var(--green)'};margin-top:2px">${atrasado?'● Sin compra reciente':'● Compra reciente'}</div>`:''}
+          ${c.crmId?`<button class="btn btn-sm btn-red" onclick="deleteCliente('${c.crmId}')" style="margin-top:4px;padding:2px 8px;font-size:9px">Eliminar</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== RENDER FLUJO DE CAJA =====================
+function renderFlujoCaja(){
+  const ingresosMes={},egresosMes={};
+  ventas.filter(v=>v.estado==='PAGADO').forEach(v=>{const k=monthKey(v.fecha);ingresosMes[k]=(ingresosMes[k]||0)+v.total});
+  gastos.forEach(g=>{const k=monthKey(g.fecha);egresosMes[k]=(egresosMes[k]||0)+g.monto});
+  const allKeys=[...new Set([...Object.keys(ingresosMes),...Object.keys(egresosMes)])].sort();
+  const totalIngresos=Object.values(ingresosMes).reduce((a,b)=>a+b,0);
+  const totalEgresos=Object.values(egresosMes).reduce((a,b)=>a+b,0);
+  const neto=totalIngresos-totalEgresos;
+  const porCobrar=ventas.filter(v=>v.estado==='POR PAGAR').reduce((a,b)=>a+b.total,0);
+  document.getElementById('cf-ingresos').textContent=fmtS(totalIngresos);
+  document.getElementById('cf-egresos').textContent=fmtS(totalEgresos);
+  document.getElementById('cf-neto').textContent=fmtS(neto);
+  document.getElementById('cf-neto').className='metric-value '+(neto>=0?'metric-gold':'metric-down');
+  document.getElementById('cf-porcobrar').textContent=fmtS(porCobrar);
+  const maxVal=Math.max(...allKeys.map(k=>Math.max(ingresosMes[k]||0,egresosMes[k]||0)),1);
+  const chartH=90;
+  document.getElementById('cf-chart').innerHTML=allKeys.map(k=>{
+    const ing=ingresosMes[k]||0,eg=egresosMes[k]||0;
+    const hI=Math.max(2,Math.round(ing/maxVal*chartH)),hE=Math.max(2,Math.round(eg/maxVal*chartH));
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative">
+      <div style="display:flex;align-items:flex-end;gap:2px;width:100%">
+        <div style="flex:1;height:${hI}px;background:rgba(46,204,113,0.6);border-radius:1px 1px 0 0;min-height:2px" title="Ing: ${fmtS(ing)}"></div>
+        <div style="flex:1;height:${hE}px;background:rgba(231,76,60,0.6);border-radius:1px 1px 0 0;min-height:2px" title="Eg: ${fmtS(eg)}"></div>
+      </div>
+      <div style="position:absolute;bottom:-18px;font-size:8px;color:var(--text3);white-space:nowrap">${monthLabel(k).slice(0,6)}</div>
+    </div>`;
+  }).join('');
+  let acum=0;
+  document.getElementById('cf-table').innerHTML=allKeys.map(k=>{
+    const ing=ingresosMes[k]||0,eg=egresosMes[k]||0,net=ing-eg;acum+=net;
+    return `<tr><td class="mono" style="font-size:11px">${monthLabel(k)}</td>
+      <td class="right mono" style="color:var(--green)">${fmtS(ing)}</td>
+      <td class="right mono" style="color:var(--red)">${fmtS(eg)}</td>
+      <td class="right mono" style="color:${net>=0?'var(--gold)':'var(--red)'}">${fmtS(net)}</td>
+      <td class="right mono" style="color:${acum>=0?'var(--text2)':'var(--red)'}">${fmtS(acum)}</td></tr>`;
+  }).join('');
+  const catTotals={};gastos.forEach(g=>{catTotals[g.categoria]=(catTotals[g.categoria]||0)+g.monto});
+  const totalGa=Object.values(catTotals).reduce((a,b)=>a+b,1);
+  document.getElementById('cf-cat-chart').innerHTML=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`
+    <div class="progress-row"><div class="progress-label">${cat}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(val/totalGa*100)}%;background:${catColors[cat]||'#888'}"></div></div>
+    <div class="progress-val">${fmtS(val)}</div></div>`).join('');
+  const typeF=document.getElementById('cf-type-filter').value;
+  const movs=[];
+  ventas.filter(v=>v.estado==='PAGADO').forEach(v=>movs.push({f:v.fecha,tipo:'ingreso',d:`Venta — ${v.cliente_nombre||'—'}`,cat:'venta',m:v.total}));
+  gastos.forEach(g=>movs.push({f:g.fecha,tipo:'egreso',d:g.detalle,cat:g.categoria,m:g.monto}));
+  movs.sort((a,b)=>b.f.localeCompare(a.f));
+  const filtered=typeF==='all'?movs:movs.filter(m=>m.tipo===typeF);
+  document.getElementById('cf-movimientos').innerHTML=filtered.slice(0,80).map(m=>`<tr>
+    <td class="mono" style="font-size:11px">${fmtDate(m.f)}</td>
+    <td><span class="badge ${m.tipo==='ingreso'?'badge-green':'badge-red'}">${m.tipo}</span></td>
+    <td style="max-width:220px;font-size:11px">${m.d}</td>
+    <td><span style="font-size:9px;padding:1px 6px;border-radius:2px;background:${catColors[m.cat]||'#333'}22;color:${catColors[m.cat]||'var(--text2)'}">${m.cat}</span></td>
+    <td class="right mono" style="color:${m.tipo==='ingreso'?'var(--green)':'var(--red)'}">${m.tipo==='ingreso'?'+':'−'}${fmtS(m.m)}</td>
+  </tr>`).join('');
+}
+
+// ===================== RENDER GASTOS =====================
+function renderGastos(){
+  const imp=document.getElementById('gasto-import-filter').value;
+  const cat=document.getElementById('gasto-cat-filter').value;
+  let rows=gastos.filter(g=>(imp==='all'||g.importacion==imp)&&(cat==='all'||g.categoria===cat));
+  const total=rows.reduce((a,b)=>a+b.monto,0);
+  document.getElementById('g-total').textContent=fmtS(total);
+  document.getElementById('g-op').textContent=fmtS(rows.filter(g=>g.categoria==='operacion').reduce((a,b)=>a+b.monto,0));
+  document.getElementById('g-mkt').textContent=fmtS(rows.filter(g=>g.categoria==='marketing').reduce((a,b)=>a+b.monto,0));
+  document.getElementById('g-log').textContent=fmtS(rows.filter(g=>g.categoria==='logistica').reduce((a,b)=>a+b.monto,0));
+  document.getElementById('gastos-table').innerHTML=rows.map(g=>`<tr>
+    <td class="mono" style="font-size:11px">${fmtDate(g.fecha)}</td>
+    <td><span class="badge" style="background:${catColors[g.categoria]||'#333'}22;color:${catColors[g.categoria]||'var(--text2)'};border-color:${catColors[g.categoria]||'var(--border)'}44">${g.categoria}</span></td>
+    <td style="max-width:240px;font-size:12px">${g.detalle}</td>
+    <td style="color:var(--text3);font-size:11px">${g.responsable||'—'}</td>
+    <td class="right mono" style="color:var(--red)">${fmtS(g.monto)}</td>
+    <td><span class="badge badge-gray">I${g.importacion}</span></td>
+    <td><div class="action-cell">
+      <button class="btn btn-sm" onclick='openModal("modal-gasto","editar",${JSON.stringify(g)})'>Editar</button>
+      <button class="btn btn-sm btn-red" onclick="deleteGasto('${g.id}')">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ===================== RENDER FINANZAS =====================
+function renderFinanzas(){
+  const v1=ventas.filter(v=>v.importacion===1).reduce((a,b)=>a+b.total,0);
+  const v2=ventas.filter(v=>v.importacion===2&&v.estado==='PAGADO').reduce((a,b)=>a+b.total,0);
+  const tg=gastos.reduce((a,b)=>a+b.monto,0);
+  const tv=ventas.reduce((a,b)=>a+b.total,0);
+  document.getElementById('fin-ingresos').textContent=fmtS(tv);
+  document.getElementById('fin-costos').textContent=fmtS(tg);
+  document.getElementById('fin-utilidad').textContent=fmtS(tv-tg);
+  document.getElementById('fin-utilidad').className='metric-value '+(tv-tg>=0?'metric-gold':'metric-down');
+  const g2=gastos.filter(g=>g.importacion===2);
+  const tg2=g2.reduce((a,b)=>a+b.monto,0);
+  const costoImport2=3123441+3507905,ivaDuana2=1194665,agente2=550000+790197,flete2=773500+200000;
+  const margen2=v2-(costoImport2+ivaDuana2+agente2+flete2);
+  const otrOp2=Math.max(0,tg2-costoImport2-ivaDuana2-agente2-flete2);
+  document.getElementById('pl-import2').innerHTML=`
+    <div class="pl-row section-head"><span>Ingresos</span></div>
+    <div class="pl-row"><span>Ventas cobradas Import 2</span><span style="color:var(--green)">${fmtS(v2)}</span></div>
+    <div class="pl-row section-head"><span>Costos directos</span></div>
+    <div class="pl-row"><span>Pago Alibaba (mercadería)</span><span style="color:var(--red)">-${fmtS(costoImport2)}</span></div>
+    <div class="pl-row"><span>IVA Aduana</span><span style="color:var(--red)">-${fmtS(ivaDuana2)}</span></div>
+    <div class="pl-row"><span>Agente aduanero</span><span style="color:var(--red)">-${fmtS(agente2)}</span></div>
+    <div class="pl-row"><span>Flete + descarga</span><span style="color:var(--red)">-${fmtS(flete2)}</span></div>
+    <div class="pl-row total"><span>Margen bruto</span><span style="color:${margen2>=0?'var(--gold)':'var(--red)'}">${fmtS(margen2)}</span></div>
+    <div class="pl-row section-head"><span>Otros gastos operacionales</span></div>
+    <div class="pl-row"><span>Marketing, logística, admin, etc.</span><span style="color:var(--red)">-${fmtS(otrOp2)}</span></div>
+    <div class="pl-row total"><span>Resultado neto (cobrado)</span><span style="color:${(margen2-otrOp2)>=0?'var(--gold)':'var(--red)'}">${fmtS(margen2-otrOp2)}</span></div>`;
+  const catTotals={};gastos.forEach(g=>{catTotals[g.categoria]=(catTotals[g.categoria]||0)+g.monto});
+  const totalGa=Object.values(catTotals).reduce((a,b)=>a+b,1);
+  document.getElementById('fin-cat-chart').innerHTML=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`
+    <div class="progress-row"><div class="progress-label">${cat}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(val/totalGa*100)}%;background:${catColors[cat]||'#888'}"></div></div>
+    <div class="progress-val">${fmtS(val)}</div></div>`).join('');
+  document.getElementById('fin-import-tabla').innerHTML=`
+    <tr><td>Import 1</td><td class="right">~6.321</td><td class="right">$873</td><td class="right">$4.234.666</td><td class="right">$1.396.803</td><td class="right metric-gold">${fmtS(v1)}</td><td><span class="badge badge-gray">Cerrada</span></td></tr>
+    <tr><td>Import 2</td><td class="right">~12.000</td><td class="right">$885</td><td class="right">$6.631.346</td><td class="right">$1.194.665</td><td class="right metric-gold">${fmtS(v2)}</td><td><span class="badge badge-green">Activa</span></td></tr>
+    <tr><td>Import 3</td><td class="right">~20.405</td><td class="right">~$950</td><td class="right">$19.452.074</td><td class="right">$3.605.213</td><td class="right metric-gold">En proceso</td><td><span class="badge badge-gold">En tránsito</span></td></tr>`;
+}
+</script>
+</body>
+</html>
